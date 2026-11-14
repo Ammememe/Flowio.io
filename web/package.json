@@ -2,7 +2,7 @@
   "name": "@flowio/web",
   "private": true,
   "version": "0.0.1",
-  "description": "Web app shell: P1-6 hello world plus the Phase 2 slide renderer, themes and present mode.",
+  "description": "Web app shell: P1-6 hello world, the Phase 2 slide renderer/themes/present mode, and the Phase 3 dashboard/editor.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,6 +13,9 @@
   },
   "dependencies": {
     "@flowio/shared": "workspace:*",
+    "@tiptap/core": "^3.34.0",
+    "@tiptap/extension-document": "^3.34.0",
+    "@tiptap/extension-text": "^3.34.0",
     "motion": "^14.14.0"
   },
   "devDependencies": {

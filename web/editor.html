@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowio - editor</title>
+    <link rel="stylesheet" href="/src/editor/style.css" />
+  </head>
+  <body>
+    <header class="editor-topbar">
+      <a href="/dashboard.html" class="editor-topbar__back">← Decks</a>
+      <input id="deck-title" class="editor-topbar__title" type="text" />
+      <div id="pickers" class="editor-topbar__pickers"></div>
+      <div class="editor-topbar__history">
+        <button id="undo" class="icon" type="button" title="Undo">↶</button>
+        <button id="redo" class="icon" type="button" title="Redo">↷</button>
+      </div>
+      <span id="save-status" class="editor-topbar__status"></span>
+      <a id="present-link" class="secondary editor-topbar__present" target="_blank" rel="noopener">Present</a>
+    </header>
+
+    <div class="editor-body">
+      <aside class="editor-sidebar">
+        <ul id="slide-list" class="slide-list"></ul>
+        <div id="add-slide"></div>
+      </aside>
+
+      <main id="editor-canvas" class="editor-canvas"></main>
+
+      <aside class="editor-inspector">
+        <h3>Cues</h3>
+        <p class="editor-inspector__hint">Phrases the speaker is likely to say for this bullet. Used by the live matcher (Phase 4) and by Claude (Phase 5) when it writes a deck for you.</p>
+        <div id="cue-editor"></div>
+      </aside>
+    </div>
+
+    <p id="conflict-banner" class="conflict-banner" hidden>
+      This deck was changed elsewhere.
+      <button id="reload-deck" class="secondary" type="button">Reload</button>
+    </p>
+
+    <script type="module" src="/src/editor/main.ts"></script>
+  </body>
+</html>

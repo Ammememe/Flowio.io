@@ -2,9 +2,11 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
+import { getVerifier } from "../auth/getVerifier.js";
 import { getDeck } from "../handlers.js";
 import { logger } from "../logger.js";
 import { DynamoDeckStore } from "../store/dynamoStore.js";
+import { getAuthHeader } from "./authHeader.js";
 
 const store = new DynamoDeckStore(requireEnv("DECKS_TABLE_NAME"));
 
@@ -20,7 +22,8 @@ export async function handler(
   const id = event.pathParameters?.id ?? "";
 
   try {
-    const result = await getDeck(store, id);
+    const auth = await getVerifier().verify(getAuthHeader(event));
+    const result = await getDeck(store, auth, id);
     return {
       statusCode: result.status,
       headers: { "content-type": "application/json" },

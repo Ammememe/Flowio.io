@@ -2,7 +2,7 @@
   "name": "@flowio/api",
   "private": true,
   "version": "0.0.1",
-  "description": "Deck API (P1-6 hello world): Lambda handlers behind API Gateway, backed by DynamoDB.",
+  "description": "Deck API: Lambda handlers behind API Gateway, backed by DynamoDB and Cognito auth (P3-1/P3-2/P3-8).",
   "type": "module",
   "scripts": {
     "dev": "node --import tsx src/localServer.ts",
@@ -12,8 +12,11 @@
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1169.0",
+    "@aws-sdk/client-s3": "^3.1169.0",
     "@aws-sdk/lib-dynamodb": "^3.1169.0",
+    "@aws-sdk/s3-presigned-post": "^3.1169.0",
     "@flowio/shared": "workspace:*",
+    "aws-jwt-verify": "^5.2.1",
     "zod": "^4.6.7"
   },
   "devDependencies": {

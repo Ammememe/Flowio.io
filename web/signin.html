@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowio - sign in</title>
+    <link rel="stylesheet" href="/src/auth/signin.css" />
+  </head>
+  <body>
+    <main class="signin">
+      <h1>Flowio</h1>
+      <p class="signin__note">
+        Dev sign-in stand-in (P3-1) -- there's no deployed Cognito yet, so
+        this just remembers an email locally. Real email/password + Google
+        sign-in replace this once the user pool is deployed.
+      </p>
+      <form id="signin-form">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required placeholder="you@example.com" autofocus />
+        <button type="submit">Sign in</button>
+      </form>
+      <p id="signin-error" class="signin__error" hidden></p>
+    </main>
+    <script type="module" src="/src/auth/signinMain.ts"></script>
+  </body>
+</html>

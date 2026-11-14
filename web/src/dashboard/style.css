@@ -1,0 +1,74 @@
+@import "../app.css";
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 24px;
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+.topbar h1 {
+  margin: 0;
+  font-size: 18px;
+}
+.topbar__user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+.dashboard {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+.dashboard__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.dashboard__status {
+  color: var(--app-muted);
+  font-size: 13px;
+  min-height: 18px;
+}
+
+.deck-list {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.deck-card {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.deck-card__title {
+  font-weight: 600;
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  padding: 0;
+  color: var(--app-text);
+  font-size: 15px;
+}
+.deck-card__meta {
+  color: var(--app-muted);
+  font-size: 12px;
+}
+.deck-card__actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}

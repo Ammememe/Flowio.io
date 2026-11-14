@@ -16,7 +16,7 @@ pnpm workspace, five packages:
 | Package | What it is |
 | --- | --- |
 | `shared` | Deck schema v1 in Zod (P1-2) and other types shared by everything below. |
-| `web` | The browser app: the P1-6 hello world, plus the Phase 2 slide renderer, themes and present mode. The editor starts in Phase 3. |
+| `web` | The browser app: the P1-6 hello world, the Phase 2 slide renderer/themes/present mode, and the Phase 3 sign-in/dashboard/editor. |
 | `api` | Lambda handlers behind API Gateway, backed by DynamoDB. |
 | `mcp` | Empty placeholder. Built out in Phase 5 (Claude connector). |
 | `infra` | AWS CDK app (P1-4). See `infra/README.md` before deploying anything. |
@@ -40,6 +40,9 @@ Open http://localhost:5174 and click the button: it creates a deck through
 the API, fetches it back, and checks the result validates against the deck
 schema and round-trips unchanged -- the P1-6 exit test, run by hand.
 
+(Phase 3 added auth to every `/decks` call -- this page signs itself in
+with a fixed dev identity automatically so it still works standalone.)
+
 ## Present a deck (Phase 2)
 
 ```bash
@@ -52,6 +55,30 @@ a few extra slides added to exercise all six layouts. Keys: `→`/`←`/`Space`/
 `PageUp`/`PageDown` to navigate, `1`-`9` to emphasise the nth bullet on the
 current slide (a manual stand-in for Phase 4's matcher), `0`/`Escape` to
 clear emphasis, `t` to swap the static/animated theme, `f` for fullscreen.
+
+## Sign up and build a deck (Phase 3)
+
+```bash
+pnpm --filter api run dev        # local API, now with auth + full deck CRUD + uploads
+pnpm --filter web run dev        # same server as above, now also serves /dashboard.html etc.
+```
+
+Open http://localhost:5174/dashboard.html. There's no deployed Cognito yet
+(P3-1 still needs a real AWS deploy), so sign-in is a local stand-in:
+type any email at `/signin.html` and it's remembered in `localStorage` --
+that becomes the `Authorization: Bearer dev:<email>` header the API's
+`DevVerifier` accepts. Real email/password + Google sign-in replace this
+once the user pool is deployed; nothing else changes.
+
+From the dashboard: **New deck** → the editor. The canvas *is* the editor --
+click any title/bullet to edit it in place (Tiptap, P3-5), drag images onto
+the "Replace image" overlay to upload one (P3-7, local dev stores the file
+in memory instead of real S3), use the sidebar to add/duplicate/delete/drag-
+reorder slides (P3-4), the top bar to pick a layout or theme per slide/deck
+(P3-6), and the right panel to add cue phrases per bullet (P3-9). Every
+change autosaves with a version number (P3-8) -- two tabs open on the same
+deck will get a 409 and a "reload" prompt instead of silently clobbering
+each other. **Present** opens `/present.html?deckId=...` with the real deck.
 
 ## Checks
 
@@ -109,3 +136,31 @@ triggers emphasis on any bullet"): verified by hand in a real browser --
 correctly in both themes, and digit keys emphasise bullets correctly in
 each. No manual-control present mode existed before this phase, so there's
 nothing from Phase 1 it could regress.
+
+## Phase 3 status
+
+| Issue | Status |
+| --- | --- |
+| P3-1 Sign-in with Cognito (email + Google) | CDK written (user pool, Hosted UI domain, app client; Google IdP wired but needs real `GOOGLE_CLIENT_ID`/`SECRET` from Google Cloud Console), not deployed. Local dev uses a stand-in (`web/src/auth/devAuth.ts`) |
+| P3-2 Deck API: create/list/get/update/delete, owner-only | Done -- owner checks return 404 (not 403) for someone else's deck, so existence isn't leaked |
+| P3-3 Dashboard | Done -- `web/dashboard.html`: list, create, rename, delete |
+| P3-4 Editor shell | Done -- `web/editor.html` sidebar: add, duplicate, delete, drag-to-reorder |
+| P3-5 Edit titles/bullets in place with Tiptap | Done -- minimal single-line Tiptap editors mounted directly onto the rendered elements (`web/src/editor/inlineEditor.ts`) |
+| P3-6 Layout + theme picker | Done -- per-slide layout, per-deck theme (`web/src/editor/pickers.ts`) |
+| P3-7 Image upload: presigned, size/type limits, CloudFront | Done -- real S3 presigned POST + its own CloudFront distribution in CDK (not deployed); local dev stores uploads in memory with the same size/type checks (`shared/src/uploadLimits.ts`) |
+| P3-8 Autosave with a version number, undo/redo | Done -- optimistic concurrency (`expectedVersion`, 409 on conflict), debounced autosave, whole-deck undo/redo history |
+| P3-9 Cue editor | Done -- per-bullet cue phrases in the editor's right panel |
+
+**Exit test** ("a new user signs up, builds a 5-slide deck with one image,
+reloads the page, and nothing is lost"): verified by hand in a real browser
+for everything except real sign-up and a real S3 image -- sign-in,
+dashboard, slide add/edit/reorder, theme/layout changes, cues, and autosave
+all survive a hard reload against the local dev API. P3-1 and the S3 half
+of P3-7 need an actual `cdk deploy` (still blocked, see Phase 1 above)
+before they're real rather than local stand-ins.
+
+Two real bugs were caught and fixed in this pass: Tiptap was duplicating
+text (it appends into the mount element rather than replacing it -- fixed
+by clearing the element first) and the editor canvas was silently missing
+all slide-content CSS (it lived only in `present/style.css`; pulled the
+shared rules into `web/src/render/slideContent.css`, imported by both).

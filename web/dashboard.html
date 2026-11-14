@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flowio - your decks</title>
+    <link rel="stylesheet" href="/src/dashboard/style.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Flowio</h1>
+      <div class="topbar__user">
+        <span id="user-email"></span>
+        <button id="sign-out" class="secondary">Sign out</button>
+      </div>
+    </header>
+
+    <main class="dashboard">
+      <div class="dashboard__toolbar">
+        <h2>Your decks</h2>
+        <button id="new-deck" class="primary">New deck</button>
+      </div>
+      <p id="status" class="dashboard__status"></p>
+      <ul id="deck-list" class="deck-list"></ul>
+    </main>
+
+    <script type="module" src="/src/dashboard/main.ts"></script>
+  </body>
+</html>

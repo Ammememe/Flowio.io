@@ -1,12 +1,25 @@
-# Infra (P1-4)
+# Infra (P1-4, extended Phase 3)
 
 AWS CDK app with two stacks, both parameterised by `stage` ("dev" for now --
 see P1-3 in the phase plan for why there's no "prod" account yet):
 
-- **`Flowio-Api-{stage}`**: DynamoDB table for decks, S3 media bucket,
-  two Lambda functions (`createDeck`, `getDeck`) behind an HTTP API.
+- **`Flowio-Api-{stage}`**: a Cognito user pool + Hosted UI domain (P3-1),
+  DynamoDB table for decks with an owner GSI (P3-2/P3-8), six Lambda
+  functions (deck CRUD + upload presign) behind an HTTP API, and an S3
+  media bucket with its own CloudFront distribution (P3-7).
 - **`Flowio-Web-{stage}`**: S3 bucket + CloudFront distribution serving
   the built `web` app.
+
+### Google sign-in (part of P3-1)
+
+Email/password works with no extra setup. Google needs a real OAuth client
+from [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+(OAuth consent screen + a Web application client, authorized redirect URI
+`https://<cognito-domain>/oauth2/idpresponse` -- the domain is a CDK output,
+`CognitoHostedUiDomain`, only known after the user pool is deployed once
+without Google). Set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as env vars
+before `cdk deploy` to add it; without them the pool still works with
+email/password alone.
 
 ## Before you can deploy anything
 

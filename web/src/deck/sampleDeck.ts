@@ -10,9 +10,11 @@ import { DECK_SCHEMA_VERSION, type Deck } from "@flowio/shared";
 export const sampleDeck: Deck = {
   schemaVersion: DECK_SCHEMA_VERSION,
   id: "deck_sample_airplanes",
+  ownerId: "demo",
   title: "How airplanes fly",
   themeId: "theme-a",
   language: "en",
+  version: 1,
   slides: [
     {
       id: "slide_title",

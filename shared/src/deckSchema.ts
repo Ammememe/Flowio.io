@@ -78,23 +78,51 @@ export type Slide = z.infer<typeof slideSchema>;
 export const deckSchema = z.object({
   schemaVersion: z.literal(DECK_SCHEMA_VERSION),
   id: z.string().min(1),
+  /** Cognito `sub` (P3-1). Set by the server from the authenticated request, never by the client. */
+  ownerId: z.string().min(1),
   title: z.string().min(1),
   themeId: z.string().min(1),
   /** ISO 639-1. Swedish and English first (P4-8); kept here from v1 so decks always carry it. */
   language: z.enum(["sv", "en"]).default("en"),
   slides: z.array(slideSchema).default([]),
+  /** P3-8: bumped by the server on every update. A client must send the version it last read back as `expectedVersion`; a mismatch means another tab/device saved first. */
+  version: z.number().int().min(1),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });
 export type Deck = z.infer<typeof deckSchema>;
 
-/** Shape accepted when creating a deck: no id/timestamps yet, server assigns those. */
+/** Shape accepted when creating a deck: server assigns id/ownerId/version/timestamps. */
 export const newDeckSchema = deckSchema.omit({
   id: true,
+  ownerId: true,
+  version: true,
   createdAt: true,
   updatedAt: true,
 });
 export type NewDeck = z.infer<typeof newDeckSchema>;
+
+/** P3-8: a save sends only what changed, plus the version it was based on. */
+export const updateDeckSchema = z.object({
+  title: z.string().min(1).optional(),
+  themeId: z.string().min(1).optional(),
+  language: z.enum(["sv", "en"]).optional(),
+  slides: z.array(slideSchema).optional(),
+  expectedVersion: z.number().int().min(1),
+});
+export type UpdateDeck = z.infer<typeof updateDeckSchema>;
+
+/** Dashboard list view (P3-3): no need to ship every slide's full content for a list row. */
+export const deckSummarySchema = deckSchema.pick({
+  id: true,
+  title: true,
+  themeId: true,
+  language: true,
+  version: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type DeckSummary = z.infer<typeof deckSummarySchema>;
 
 export function parseDeck(value: unknown): Deck {
   return deckSchema.parse(value);
@@ -102,4 +130,16 @@ export function parseDeck(value: unknown): Deck {
 
 export function safeParseDeck(value: unknown) {
   return deckSchema.safeParse(value);
+}
+
+export function summarizeDeck(deck: Deck): DeckSummary {
+  return {
+    id: deck.id,
+    title: deck.title,
+    themeId: deck.themeId,
+    language: deck.language,
+    version: deck.version,
+    createdAt: deck.createdAt,
+    updatedAt: deck.updatedAt,
+  };
 }

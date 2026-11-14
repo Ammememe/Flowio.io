@@ -1,0 +1,76 @@
+/* Shared base styles for the editor-side pages (sign-in, dashboard, editor) -- distinct from
+   the presented-deck themes in src/themes/, which style slide content, not the app chrome. */
+
+:root {
+  --app-bg: #f6f7f9;
+  --app-surface: #ffffff;
+  --app-border: #e1e4e9;
+  --app-text: #1a1f24;
+  --app-muted: #6b7684;
+  --app-accent: #2563eb;
+  --app-accent-contrast: #ffffff;
+  --app-danger: #d1393f;
+  --app-radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+button {
+  font: inherit;
+  cursor: pointer;
+}
+
+button.primary {
+  background: var(--app-accent);
+  color: var(--app-accent-contrast);
+  border: none;
+  border-radius: var(--app-radius);
+  padding: 8px 16px;
+}
+
+button.secondary {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 8px 16px;
+}
+
+button.danger {
+  background: var(--app-surface);
+  color: var(--app-danger);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  padding: 6px 12px;
+}
+
+button.icon {
+  background: transparent;
+  border: none;
+  color: var(--app-muted);
+  padding: 4px;
+  border-radius: 4px;
+}
+button.icon:hover {
+  background: var(--app-border);
+}
+
+input[type="text"],
+input[type="email"] {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  color: var(--app-text);
+}

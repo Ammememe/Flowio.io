@@ -14,5 +14,14 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? "eu-north-1",
 };
 
-new ApiStack(app, `Flowio-Api-${stage}`, { stage, env });
+// P3-1: Cognito Hosted UI callback/logout URLs. http://localhost:5174 lets
+// local dev sign in against the deployed pool. Add the real domain here
+// once P1-8 picks one -- there's no CloudFront URL to add automatically
+// until after WebStack's first deploy.
+const webAppUrls = [
+  "http://localhost:5174",
+  ...(process.env.EXTRA_WEB_APP_URL ? [process.env.EXTRA_WEB_APP_URL] : []),
+];
+
+new ApiStack(app, `Flowio-Api-${stage}`, { stage, env, webAppUrls });
 new WebStack(app, `Flowio-Web-${stage}`, { stage, env });

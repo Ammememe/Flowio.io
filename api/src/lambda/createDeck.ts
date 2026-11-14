@@ -2,9 +2,11 @@ import type {
   APIGatewayProxyEventV2,
   APIGatewayProxyResultV2,
 } from "aws-lambda";
+import { getVerifier } from "../auth/getVerifier.js";
 import { createDeck } from "../handlers.js";
 import { logger } from "../logger.js";
 import { DynamoDeckStore } from "../store/dynamoStore.js";
+import { getAuthHeader } from "./authHeader.js";
 
 // Created once per Lambda execution environment and reused across warm
 // invocations -- avoids opening a new DynamoDB client connection per request.
@@ -27,7 +29,8 @@ export async function handler(
   }
 
   try {
-    const result = await createDeck(store, body);
+    const auth = await getVerifier().verify(getAuthHeader(event));
+    const result = await createDeck(store, auth, body);
     return {
       statusCode: result.status,
       headers: { "content-type": "application/json" },

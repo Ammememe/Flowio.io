@@ -1,0 +1,37 @@
+@import "../app.css";
+
+.signin {
+  max-width: 360px;
+  margin: 15vh auto 0;
+  padding: 32px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+}
+
+.signin h1 {
+  margin: 0 0 8px;
+}
+
+.signin__note {
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.signin form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.signin label {
+  font-size: 13px;
+  color: var(--app-muted);
+}
+
+.signin__error {
+  color: var(--app-danger);
+  font-size: 13px;
+}

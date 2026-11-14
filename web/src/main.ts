@@ -1,7 +1,15 @@
-import { DECK_SCHEMA_VERSION, safeParseDeck, type NewDeck } from "@flowio/shared";
+import { DECK_SCHEMA_VERSION, type NewDeck } from "@flowio/shared";
+import { createDeck, getDeck } from "./api/client.js";
+import { getCurrentUser, signIn } from "./auth/devAuth.js";
 import { installErrorReporter } from "./errorReporter.js";
 
 installErrorReporter();
+
+// Phase 3 (P3-1) requires every /decks call to be authenticated. This demo
+// page predates sign-in, so it signs itself in with a fixed dev identity
+// rather than sending you to /signin.html first -- it's just proving the
+// API round-trips a deck, not exercising real auth.
+if (!getCurrentUser()) signIn("hello-world@flowio.local");
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8787";
 
@@ -36,44 +44,13 @@ async function run(): Promise<void> {
   log(lines);
 
   try {
-    const toSave = sampleDeck();
-    const createRes = await fetch(`${API_URL}/decks`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(toSave),
-    });
-    if (!createRes.ok) {
-      lines.push(`POST /decks failed: ${createRes.status}`);
-      log(lines);
-      return;
-    }
-    const created: unknown = await createRes.json();
+    const created = await createDeck(sampleDeck());
     lines.push(`Created deck: ${JSON.stringify(created)}`);
 
-    const createdParsed = safeParseDeck(created);
-    if (!createdParsed.success) {
-      lines.push("FAIL: response from POST /decks does not match the deck schema");
-      log(lines);
-      return;
-    }
-
-    const getRes = await fetch(`${API_URL}/decks/${createdParsed.data.id}`);
-    if (!getRes.ok) {
-      lines.push(`GET /decks/:id failed: ${getRes.status}`);
-      log(lines);
-      return;
-    }
-    const fetched: unknown = await getRes.json();
-    const fetchedParsed = safeParseDeck(fetched);
-    if (!fetchedParsed.success) {
-      lines.push("FAIL: response from GET /decks/:id does not match the deck schema");
-      log(lines);
-      return;
-    }
-
-    const unchanged =
-      JSON.stringify(fetchedParsed.data) === JSON.stringify(createdParsed.data);
+    const fetched = await getDeck(created.id);
     lines.push(`Fetched deck: ${JSON.stringify(fetched)}`);
+
+    const unchanged = JSON.stringify(fetched) === JSON.stringify(created);
     lines.push(
       unchanged
         ? "PASS: deck round-tripped through the API unchanged (P1-6 exit test)."

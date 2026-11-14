@@ -10,9 +10,11 @@ function sampleDeck() {
   return {
     schemaVersion: DECK_SCHEMA_VERSION,
     id: "deck_1",
+    ownerId: "user_1",
     title: "Airplanes",
     themeId: "theme-a",
     language: "en" as const,
+    version: 1,
     slides: [
       {
         id: "slide_1",
@@ -68,8 +70,8 @@ describe("deck schema v1", () => {
     expect(result.success).toBe(false);
   });
 
-  it("newDeckSchema accepts a deck without id or timestamps", () => {
-    const { id, createdAt, updatedAt, ...rest } = sampleDeck();
+  it("newDeckSchema accepts a deck without id, ownerId, version or timestamps", () => {
+    const { id, ownerId, version, createdAt, updatedAt, ...rest } = sampleDeck();
     const result = newDeckSchema.safeParse(rest);
     expect(result.success).toBe(true);
   });
