@@ -1,0 +1,518 @@
+:root {
+  --bg: #0f1216;
+  --panel: #171b21;
+  --field: #20262e;
+  --line: #2c333d;
+  --text: #e8eaed;
+  --muted: #9aa3ad;
+  --accent: #ff7a1a;
+  --emb: #5aa9ff;
+  --kw: #ffb454;
+  --paper: #f7f4ee;
+  --ink: #15181c;
+  --ink-soft: #8a8377;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ---------- Slide ---------- */
+
+#stage-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 28px;
+}
+
+#stage {
+  width: min(100%, calc((100vh - 110px) * 16 / 9));
+  aspect-ratio: 16 / 9;
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  padding: 6% 7%;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.slide-kicker {
+  font-size: 1.5cqw;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+#stage h1 {
+  margin: 1.2cqw 0 4.2cqw;
+  font-size: 4.8cqw;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.bullets {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5cqw;
+  max-width: 84%;
+}
+
+/* P0-6: the one highlight animation. The active bullet grows from its left edge; the others dim. */
+.bullets li {
+  display: flex;
+  align-items: baseline;
+  gap: 1.8cqw;
+  font-size: 2.7cqw;
+  line-height: 1.25;
+  transform-origin: left center;
+  transition:
+    transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 0.35s ease;
+}
+
+.bullets .num {
+  flex: none;
+  width: 2.4cqw;
+  font-size: 1.5cqw;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  transition: color 0.35s ease;
+}
+
+.bullets.has-active li {
+  opacity: 0.3;
+}
+
+.bullets.has-active li.active {
+  opacity: 1;
+  transform: scale(1.14);
+}
+
+.bullets li.active .txt {
+  font-weight: 650;
+}
+
+.bullets li.active .num {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+/* Receipt for a ground-truth marker key press. */
+@keyframes marked {
+  from {
+    box-shadow: -0.6cqw 0 0 0 var(--accent);
+  }
+  to {
+    box-shadow: -0.6cqw 0 0 0 transparent;
+  }
+}
+
+.bullets li.marked {
+  animation: marked 0.9s ease-out;
+}
+
+@keyframes marked-stage {
+  from {
+    outline-color: var(--accent);
+  }
+  to {
+    outline-color: transparent;
+  }
+}
+
+#stage.marked {
+  outline: 3px solid transparent;
+  animation: marked-stage 0.9s ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bullets li {
+    transition: opacity 0.2s ease;
+  }
+  .bullets.has-active li.active {
+    transform: none;
+  }
+  .bullets li.marked,
+  #stage.marked {
+    animation: none;
+  }
+}
+
+#hint {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+kbd {
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--field);
+  font: inherit;
+}
+
+/* ---------- Control panel ---------- */
+
+#panel {
+  width: 390px;
+  flex: none;
+  overflow-y: auto;
+  padding: 18px 18px 40px;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+}
+
+body.panel-hidden #panel,
+body.panel-hidden #hint {
+  display: none;
+}
+
+#panel header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+
+#panel h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+#panel a {
+  color: var(--emb);
+  font-size: 13px;
+}
+
+#panel section {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+#panel h3 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+label {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+}
+
+select,
+input[type='number'] {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--field);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+button.primary {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #1a0f05;
+  font-weight: 600;
+}
+
+:focus-visible {
+  outline: 2px solid var(--emb);
+  outline-offset: 2px;
+}
+
+.status {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.status.error {
+  color: #ff8f8f;
+}
+
+.transcript {
+  min-height: 3.2em;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: 7px;
+  background: var(--field);
+  font-size: 13px;
+}
+
+.transcript:empty::before {
+  content: 'The transcript shows up here.';
+  color: var(--muted);
+}
+
+pre {
+  margin: 0 0 8px;
+  padding: 10px;
+  border-radius: 7px;
+  background: var(--field);
+  font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre-wrap;
+}
+
+/* Score bars */
+
+.score {
+  display: grid;
+  grid-template-columns: 16px 1fr 38px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+}
+
+.score.active .score-n {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.score-track {
+  position: relative;
+  display: flex;
+  height: 12px;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--field);
+}
+
+.score-emb {
+  background: var(--emb);
+}
+
+.score-kw {
+  background: var(--kw);
+}
+
+.score-emb,
+.score-kw {
+  transition: width 0.15s linear;
+}
+
+.score-need {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--text);
+}
+
+.score-total {
+  text-align: right;
+  color: var(--muted);
+}
+
+.legend {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 4px 0 10px;
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+
+.swatch:first-child {
+  margin-left: 0;
+}
+
+.swatch.emb {
+  background: var(--emb);
+}
+
+.swatch.kw {
+  background: var(--kw);
+}
+
+.swatch.line {
+  width: 2px;
+  background: var(--text);
+}
+
+/* Tuning sliders */
+
+.slider {
+  display: grid;
+  grid-template-columns: 1fr 64px;
+  align-items: center;
+  gap: 2px 8px;
+  margin-bottom: 10px;
+  font-size: 12.5px;
+}
+
+.slider span:first-child {
+  color: var(--muted);
+}
+
+.slider output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.slider input {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+/* ---------- Compare page ---------- */
+
+body.compare {
+  display: block;
+  height: auto;
+  min-height: 100vh;
+}
+
+.compare-wrap {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 32px 24px 64px;
+}
+
+.compare-wrap h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.compare-wrap a {
+  color: var(--emb);
+}
+
+.compare-wrap .lede {
+  margin: 0 0 20px;
+  color: var(--muted);
+}
+
+.reference {
+  padding: 16px 18px;
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 14px;
+  margin: 18px 0;
+}
+
+.controls label {
+  margin: 0;
+}
+
+.controls button {
+  flex: none;
+  min-width: 96px;
+}
+
+.providers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+th,
+td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+td.num {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+td.heard {
+  color: var(--muted);
+}

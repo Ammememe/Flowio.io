@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Transcription comparison · Live Slides spike</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body class="compare">
+    <div class="compare-wrap">
+      <h1>Transcription provider comparison</h1>
+      <p class="lede">
+        Read the text below aloud, with a pause of about a second between sentences. Every provider you tick hears
+        the same microphone at the same time. <a href="/">Back to the presenter page</a>
+      </p>
+
+      <div class="controls">
+        <label>Language
+          <select id="lang">
+            <option value="en">English</option>
+            <option value="sv">Swedish</option>
+          </select>
+        </label>
+        <div class="providers" id="providers"></div>
+        <button id="start" class="primary">Start</button>
+        <button id="stop" disabled>Stop</button>
+      </div>
+      <p id="status" class="status">Idle.</p>
+
+      <div class="reference" id="reference"></div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Provider</th>
+            <th>First text after you start speaking</th>
+            <th>Word error rate</th>
+            <th>What it heard</th>
+          </tr>
+        </thead>
+        <tbody id="results"></tbody>
+      </table>
+      <p class="status">
+        First text: time from the moment your voice is detected after a pause to the first words of that sentence
+        arriving, as a median over all sentences. Word error rate: share of the reference words that came out wrong,
+        missing or extra, so it is only meaningful if you read the whole text and nothing else.
+      </p>
+    </div>
+    <script type="module" src="/src/compare.ts"></script>
+  </body>
+</html>

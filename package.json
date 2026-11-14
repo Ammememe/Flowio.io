@@ -1,0 +1,24 @@
+{
+  "name": "live-slides",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Live Slides monorepo. See 'Live Slides Phase Plan.md' for the phase plan.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present run typecheck",
+    "build": "pnpm -r --if-present run build",
+    "test": "pnpm -r --if-present run test",
+    "lint": "pnpm -r --if-present run lint",
+    "dev:web": "pnpm --filter web run dev",
+    "dev:api": "pnpm --filter api run dev",
+    "synth": "pnpm --filter infra run synth"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["esbuild"]
+  }
+}

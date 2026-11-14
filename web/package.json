@@ -1,0 +1,20 @@
+{
+  "name": "@live-slides/web",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Web app shell (P1-6 hello world): calls the API and validates the deck it gets back.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@live-slides/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

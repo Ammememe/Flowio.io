@@ -1,0 +1,9 @@
+# Phase 1 (P1-1): explicit package list rather than a glob, so the Phase 0
+# spike folder (`live-slides-spike/`, kept for reference per its README) is
+# never picked up as a workspace member.
+packages:
+  - shared
+  - web
+  - api
+  - mcp
+  - infra

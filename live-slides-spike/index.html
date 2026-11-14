@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Live Slides spike</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main id="stage-wrap">
+      <section id="stage" aria-label="Slide"></section>
+      <p id="hint">
+        <kbd>←</kbd> <kbd>→</kbd> change slide &nbsp;·&nbsp; <kbd>1</kbd>–<kbd>9</kbd> mark the bullet being talked
+        about &nbsp;·&nbsp; <kbd>0</kbd> mark off-topic talk &nbsp;·&nbsp; <kbd>H</kbd> hide the panel
+      </p>
+    </main>
+
+    <aside id="panel">
+      <header>
+        <h2>Live Slides spike</h2>
+        <a href="/compare.html">Compare transcription providers →</a>
+      </header>
+
+      <section>
+        <h3>Deck and matching</h3>
+        <label>Deck
+          <select id="deck">
+            <option value="en">How airplanes fly (English)</option>
+            <option value="sv">Så flyger ett flygplan (Swedish)</option>
+          </select>
+        </label>
+        <label>Embedding model
+          <select id="model"></select>
+        </label>
+        <label>Run the model on
+          <select id="device">
+            <option value="wasm">CPU (WebAssembly)</option>
+            <option value="webgpu">GPU (WebGPU)</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="use-cues" checked /> Match against cue phrases too</label>
+        <p id="model-status" class="status">Starting…</p>
+      </section>
+
+      <section>
+        <h3>Speech</h3>
+        <label>Source
+          <select id="source">
+            <option value="webspeech">Microphone: browser speech recognition</option>
+            <option value="deepgram">Microphone: Deepgram (local proxy)</option>
+            <option value="transcribe">Microphone: Amazon Transcribe (local proxy)</option>
+            <option value="replay">Replay the sample talk (no microphone)</option>
+          </select>
+        </label>
+        <div class="row">
+          <button id="start" class="primary">Start</button>
+          <button id="stop" disabled>Stop</button>
+        </div>
+        <p id="speech-status" class="status">Idle.</p>
+        <p id="transcript" class="transcript" aria-live="off"></p>
+      </section>
+
+      <section>
+        <h3>Scores on this slide</h3>
+        <div id="scores"></div>
+        <p class="legend">
+          <span class="swatch emb"></span> embedding <span class="swatch kw"></span> keywords
+          <span class="swatch line"></span> confidence needed
+        </p>
+      </section>
+
+      <section>
+        <h3>Measurement</h3>
+        <pre id="metrics">No bullets marked yet.</pre>
+        <div class="row">
+          <button id="reset-log">Reset</button>
+          <button id="export-log">Export log</button>
+        </div>
+        <label>Simulated recognizer lag for replay and benchmark (ms)
+          <input type="number" id="sim-lag" min="0" max="2000" step="50" value="500" />
+        </label>
+        <div class="row">
+          <button id="benchmark">Run instant benchmark</button>
+        </div>
+        <pre id="bench" hidden></pre>
+      </section>
+
+      <section>
+        <h3>Tuning</h3>
+        <div id="sliders"></div>
+        <div class="row"><button id="reset-config">Reset to defaults</button></div>
+      </section>
+    </aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
