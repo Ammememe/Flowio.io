@@ -29,3 +29,27 @@ jobs:
       # cdk synth doubles as a validation step: it fails if the stacks don't
       # construct cleanly, without needing AWS credentials.
       - run: pnpm --filter infra run synth
+
+  visual-tests:
+    # P2-8. Runs on windows-latest, not ubuntu-latest: Playwright names
+    # snapshots per-OS because font rendering differs across platforms, and
+    # the committed baselines in web/tests/__snapshots__ were captured on
+    # Windows. Moving this to Linux means regenerating the baselines there
+    # (`pnpm --filter web exec playwright test --update-snapshots` in a
+    # Linux/Docker environment) and committing those instead.
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter web exec playwright install --with-deps chromium
+      - run: pnpm --filter web run test:visual

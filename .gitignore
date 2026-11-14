@@ -10,3 +10,10 @@ cdk.out/
 coverage/
 *.log
 .DS_Store
+
+# Playwright (P2-8) -- test-results/playwright-report are run output, not
+# the committed baselines (those live in web/tests/__snapshots__).
+test-results/
+playwright-report/
+blob-report/
+playwright/.cache/
