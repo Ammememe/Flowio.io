@@ -5,7 +5,7 @@ import {
   GetCommand,
   PutCommand,
 } from "@aws-sdk/lib-dynamodb";
-import type { Deck, NewDeck } from "@live-slides/shared";
+import type { Deck, NewDeck } from "@flowio/shared";
 import type { DeckStore } from "./deckStore.js";
 
 /**

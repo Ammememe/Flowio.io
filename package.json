@@ -1,8 +1,8 @@
 {
-  "name": "live-slides",
+  "name": "flowio",
   "private": true,
   "version": "0.0.1",
-  "description": "Live Slides monorepo. See 'Live Slides Phase Plan.md' for the phase plan.",
+  "description": "Flowio monorepo (working name -- flowio.io/.com are taken, revisit later). See 'Live Slides Phase Plan.md' for the phase plan.",
   "engines": {
     "node": ">=22.12.0"
   },

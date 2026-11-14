@@ -28,14 +28,14 @@ export class ApiStack extends Stack {
     const removalPolicy = stage === "prod" ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
 
     const decksTable = new Table(this, "DecksTable", {
-      tableName: `live-slides-decks-${stage}`,
+      tableName: `flowio-decks-${stage}`,
       partitionKey: { name: "id", type: AttributeType.STRING },
       billingMode: BillingMode.PAY_PER_REQUEST,
       removalPolicy,
     });
 
     const mediaBucket = new Bucket(this, "MediaBucket", {
-      bucketName: `live-slides-media-${stage}-${this.account}`,
+      bucketName: `flowio-media-${stage}-${this.account}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy,
       autoDeleteObjects: stage !== "prod",
@@ -63,7 +63,7 @@ export class ApiStack extends Stack {
       },
     };
 
-    const createDeckFnName = `live-slides-create-deck-${stage}`;
+    const createDeckFnName = `flowio-create-deck-${stage}`;
     const createDeckFn = new NodejsFunction(this, "CreateDeckFunction", {
       ...commonLambdaProps,
       entry: "../api/src/lambda/createDeck.ts",
@@ -77,7 +77,7 @@ export class ApiStack extends Stack {
       }),
     });
 
-    const getDeckFnName = `live-slides-get-deck-${stage}`;
+    const getDeckFnName = `flowio-get-deck-${stage}`;
     const getDeckFn = new NodejsFunction(this, "GetDeckFunction", {
       ...commonLambdaProps,
       entry: "../api/src/lambda/getDeck.ts",
@@ -94,7 +94,7 @@ export class ApiStack extends Stack {
     decksTable.grantReadData(getDeckFn);
 
     const httpApi = new HttpApi(this, "HttpApi", {
-      apiName: `live-slides-api-${stage}`,
+      apiName: `flowio-api-${stage}`,
       corsPreflight: {
         allowOrigins: ["*"], // Tighten once the web app has a fixed domain (P1-8).
         allowMethods: [CorsHttpMethod.GET, CorsHttpMethod.POST, CorsHttpMethod.OPTIONS],

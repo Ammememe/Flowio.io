@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { Deck, NewDeck } from "@live-slides/shared";
+import type { Deck, NewDeck } from "@flowio/shared";
 import type { DeckStore } from "./deckStore.js";
 
 /** In-memory DeckStore for local dev (`pnpm dev`) and unit tests. Not used in production. */

@@ -20,7 +20,7 @@ importers:
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.1169.0
         version: 3.1169.0(@aws-sdk/client-dynamodb@3.1169.0)
-      '@live-slides/shared':
+      '@flowio/shared':
         specifier: workspace:*
         version: link:../shared
       zod:
@@ -45,7 +45,7 @@ importers:
 
   infra:
     dependencies:
-      '@live-slides/shared':
+      '@flowio/shared':
         specifier: workspace:*
         version: link:../shared
       aws-cdk-lib:
@@ -73,7 +73,7 @@ importers:
 
   mcp:
     dependencies:
-      '@live-slides/shared':
+      '@flowio/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:
@@ -96,7 +96,7 @@ importers:
 
   web:
     dependencies:
-      '@live-slides/shared':
+      '@flowio/shared':
         specifier: workspace:*
         version: link:../shared
     devDependencies:

@@ -1,4 +1,4 @@
-import { DECK_SCHEMA_VERSION, type NewDeck } from "@live-slides/shared";
+import { DECK_SCHEMA_VERSION, type NewDeck } from "@flowio/shared";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createDeck, getDeck } from "../src/handlers.js";
 import { MemoryDeckStore } from "../src/store/memoryStore.js";

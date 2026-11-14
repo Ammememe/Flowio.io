@@ -1,4 +1,4 @@
-import type { Deck, NewDeck } from "@live-slides/shared";
+import type { Deck, NewDeck } from "@flowio/shared";
 
 /**
  * Storage interface the handlers depend on, so the same handler logic runs

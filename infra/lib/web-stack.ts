@@ -27,7 +27,7 @@ export class WebStack extends Stack {
     const removalPolicy = stage === "prod" ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY;
 
     const siteBucket = new Bucket(this, "SiteBucket", {
-      bucketName: `live-slides-web-${stage}-${this.account}`,
+      bucketName: `flowio-web-${stage}-${this.account}`,
       blockPublicAccess: BlockPublicAccess.BLOCK_ALL,
       removalPolicy,
       autoDeleteObjects: stage !== "prod",

@@ -1,4 +1,4 @@
-import { newDeckSchema, type Deck } from "@live-slides/shared";
+import { newDeckSchema, type Deck } from "@flowio/shared";
 import { logger } from "./logger.js";
 import type { DeckStore } from "./store/deckStore.js";
 

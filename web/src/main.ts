@@ -1,4 +1,4 @@
-import { DECK_SCHEMA_VERSION, safeParseDeck, type NewDeck } from "@live-slides/shared";
+import { DECK_SCHEMA_VERSION, safeParseDeck, type NewDeck } from "@flowio/shared";
 import { installErrorReporter } from "./errorReporter.js";
 
 installErrorReporter();

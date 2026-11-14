@@ -1,5 +1,5 @@
 {
-  "name": "@live-slides/api",
+  "name": "@flowio/api",
   "private": true,
   "version": "0.0.1",
   "description": "Deck API (P1-6 hello world): Lambda handlers behind API Gateway, backed by DynamoDB.",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.1169.0",
     "@aws-sdk/lib-dynamodb": "^3.1169.0",
-    "@live-slides/shared": "workspace:*",
+    "@flowio/shared": "workspace:*",
     "zod": "^4.6.7"
   },
   "devDependencies": {

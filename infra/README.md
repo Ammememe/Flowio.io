@@ -3,9 +3,9 @@
 AWS CDK app with two stacks, both parameterised by `stage` ("dev" for now --
 see P1-3 in the phase plan for why there's no "prod" account yet):
 
-- **`LiveSlides-Api-{stage}`**: DynamoDB table for decks, S3 media bucket,
+- **`Flowio-Api-{stage}`**: DynamoDB table for decks, S3 media bucket,
   two Lambda functions (`createDeck`, `getDeck`) behind an HTTP API.
-- **`LiveSlides-Web-{stage}`**: S3 bucket + CloudFront distribution serving
+- **`Flowio-Web-{stage}`**: S3 bucket + CloudFront distribution serving
   the built `web` app.
 
 ## Before you can deploy anything

@@ -14,5 +14,5 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? "eu-north-1",
 };
 
-new ApiStack(app, `LiveSlides-Api-${stage}`, { stage, env });
-new WebStack(app, `LiveSlides-Web-${stage}`, { stage, env });
+new ApiStack(app, `Flowio-Api-${stage}`, { stage, env });
+new WebStack(app, `Flowio-Web-${stage}`, { stage, env });

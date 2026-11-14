@@ -15,7 +15,7 @@ interface ReportedError {
 }
 
 function report(error: ReportedError): void {
-  console.error("[live-slides:error]", JSON.stringify(error));
+  console.error("[flowio:error]", JSON.stringify(error));
 }
 
 export function installErrorReporter(): void {

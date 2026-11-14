@@ -1,5 +1,5 @@
 {
-  "name": "@live-slides/mcp",
+  "name": "@flowio/mcp",
   "private": true,
   "version": "0.0.1",
   "description": "MCP server for Claude (Phase 5). Scaffolded now by P1-1 so the workspace layout is settled; empty until Phase 5.",
@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@live-slides/shared": "workspace:*"
+    "@flowio/shared": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^7.0.2"
