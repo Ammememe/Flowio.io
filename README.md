@@ -86,13 +86,12 @@ each other. **Present** opens `/present.html?deckId=...` with the real deck.
 Same `/present.html` as above, now with the actual "bullet highlights as
 you talk" engine. Click **Enable microphone** (or press `m`): a sound check
 (P4-6) asks for mic permission, lists input devices, shows a live level
-meter, and states plainly what happens to your voice before you confirm --
-today that's "sent to your browser's built-in speech recognition service"
-(P4-1 note below), never stored by us (P4-10). Once confirmed, titles and
-bullets on the current slide light up as you talk about them -- the Phase 0
-spike's matcher (P4-2, moved into `web/src/match/`), scoring embeddings
-(P4-3, a small model downloaded and cached in the browser) plus keyword
-overlap against a rolling transcript window.
+meter, and states plainly what happens to your voice before you confirm.
+Once confirmed, titles and bullets on the current slide light up as you
+talk about them -- the Phase 0 spike's matcher (P4-2, moved into
+`web/src/match/`), scoring embeddings (P4-3, a small model downloaded and
+cached in the browser) plus keyword overlap against a rolling transcript
+window.
 
 - `g` toggles following on/off without touching the mic.
 - `1`-`9` (manual emphasis) always wins over the live engine for a few
@@ -102,18 +101,36 @@ overlap against a rolling transcript window.
 - The deck's `language` field picks English or Swedish for both the
   recognizer and the embedding model (P4-8).
 
-**P4-1 note:** the plan asks for "the provider chosen in P0-8" with an API
-endpoint vending short-lived credentials so the browser streams directly to
-it. That comparison was never conclusively run (see the spike's own
-README). This build uses the Web Speech API instead -- zero setup, so the
-rest of Phase 4 could be built and verified today -- which means audio
-currently goes through your browser's own speech recognition service
-(Google's, in Chrome), not an EU-region AWS service as P4-10 asks for. Real
-Amazon Transcribe streaming needs the AWS event-stream wire protocol
-implemented in the browser (eventstream framing, not just the HTTP/2
-transport the spike's local proxy used); the `TranscriptSource` interface
-(`web/src/speech/types.ts`) isolates this choice from everything else, so
-swapping it in is a contained follow-up, not a rewrite.
+**P4-1, transcription provider:** live transcription is
+[ElevenLabs Scribe](https://elevenlabs.io/realtime-speech-to-text) --
+real-time WebSocket streaming, ~150ms latency. Your API (`api/src/
+elevenlabs/createTranscriptionToken.ts`) mints a short-lived, single-use
+token server-side (`POST /v1/single-use-token/realtime_scribe`) and hands
+it to the browser, which streams raw 16kHz PCM directly to ElevenLabs
+(`web/src/speech/elevenLabsSource.ts`) -- this is literally the "an API
+endpoint issues short-lived credentials and the browser streams audio
+directly to the provider" shape P4-1 asks for, just not the provider named
+in the plan (Amazon Transcribe, whose browser-side protocol is AWS's
+binary eventstream framing -- real engineering risk without a human to
+verify it against; ElevenLabs' wire protocol is plain JSON over WebSocket,
+which is why it shipped first). **Needs `ELEVENLABS_API_KEY` set** (get one
+at https://elevenlabs.io/app/settings/api-keys) -- without it, or if the
+request fails for any reason, the engine automatically and silently falls
+back to the Web Speech API instead of failing the mic outright. Nothing has
+been deployed with a real key yet, so this path is implementation-complete
+but unverified against real ElevenLabs traffic -- see `api/.env.example`
+for local testing once you have a key.
+
+**P4-10, privacy caveat:** ElevenLabs' self-serve API tier processes audio
+on US infrastructure, not EU, same as the Web Speech API fallback it
+replaces -- so this is a straight upgrade (latency, accuracy, a proper
+credential-vending endpoint) without making the privacy posture worse, but
+the plan's "data kept in an EU region" still isn't met by either path.
+ElevenLabs does offer EU data residency, but as an Enterprise-tier feature
+needing a contract, not something switchable from here. Amazon Transcribe
+in `eu-north-1` remains the option that satisfies P4-10 on standard
+pricing; `TranscriptSource` isolates the choice, so swapping it in later is
+still a contained follow-up, not a rewrite.
 
 **Not done:** P4-9 (usage metering) and real pilot testing (P4-11, which
 needs actual presenters, not something to automate).
@@ -235,7 +252,7 @@ shared rules into `web/src/render/slideContent.css`, imported by both).
 
 | Issue | Status |
 | --- | --- |
-| P4-1 Production transcription via a credentialed provider | Using the Web Speech API instead for now, deliberately -- see the "Present with live following" section above for why, and what swapping in real Amazon Transcribe would take |
+| P4-1 Production transcription via a credentialed provider | Done, code-complete -- ElevenLabs Scribe (not Amazon Transcribe; see the "Present with live following" section above for why), with a short-lived-token endpoint and automatic fallback to Web Speech. Needs a real `ELEVENLABS_API_KEY` to verify against live traffic |
 | P4-2 Matcher moved into its own package, tested against replayed transcripts | Done -- `web/src/match/*`, ported from the Phase 0 spike and adapted to schema v1's title/bullet elements (`web/src/match/targets.ts`); replay test ported too (`web/test/match/replay.test.ts`) |
 | P4-3 Embeddings computed on deck load, model cached in the browser | Done -- `web/src/match/workerEmbedder.ts`, a Transformers.js model runs off the main thread; keyword-only matching still works if it fails or hasn't finished loading |
 | P4-4 Matcher connected to the emphasis interface | Done -- `web/src/present/liveEngine.ts` |
@@ -244,7 +261,7 @@ shared rules into `web/src/render/slideContent.css`, imported by both).
 | P4-7 Silent fallback on failure, then reconnect | Done -- a dropped connection stops updating emphasis and retries up to 5 times, 3s apart, with no on-screen error |
 | P4-8 Language setting per deck | Done -- `deck.language` picks the recognizer's language and the embedding model (English-only vs. multilingual) |
 | P4-9 Usage metering | Not done |
-| P4-10 Privacy: audio never stored, consent text, EU region | Partly done -- consent text shown in the sound check states plainly where audio goes today (Google's speech recognition, via the browser); the EU-region requirement isn't met until P4-1 moves to Amazon Transcribe |
+| P4-10 Privacy: audio never stored, consent text, EU region | Partly done -- consent text shown in the sound check; audio is never stored on our side either way. The EU-region requirement isn't met by ElevenLabs' self-serve tier (US-processed) or the Web Speech fallback -- only Amazon Transcribe in `eu-north-1` would satisfy it |
 | P4-11 Pilot with 5-10 real presenters | Not done -- needs real people, not something to automate |
 
 **Exit test** ("a pilot user builds a deck and presents it to an audience

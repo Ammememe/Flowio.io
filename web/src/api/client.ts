@@ -91,3 +91,14 @@ export function deleteDeck(id: string): Promise<void> {
 export function defaultLayoutId(): LayoutId {
   return "bullets";
 }
+
+/**
+ * P4-1: a short-lived, single-use ElevenLabs Scribe token. Throws (502, or
+ * 501 if ElevenLabs isn't configured server-side) if it can't get one --
+ * callers (`speech/elevenLabsSource.ts`) treat that as "fall back to the
+ * Web Speech API" rather than a fatal error.
+ */
+export async function getTranscriptionToken(): Promise<string> {
+  const { token } = await request<{ token: string }>("/transcription-token", { method: "POST" });
+  return token;
+}

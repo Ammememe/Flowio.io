@@ -47,7 +47,10 @@ function run(deck: Parameters<typeof startPresenting>[0]): void {
       }
       soundCheckShown = true;
       showSoundCheck(
-        () => presenter.setMicOn(true),
+        (deviceId) => {
+          presenter.setPreferredDeviceId(deviceId);
+          presenter.setMicOn(true);
+        },
         () => {},
       );
     },

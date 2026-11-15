@@ -3,15 +3,16 @@ import { listAudioInputDevices, MicPcm } from "../speech/micPcm.js";
 
 /**
  * P4-6: microphone permission, device picker and a pre-talk sound check,
- * shown once before the presenter first turns the mic on.
- *
- * Caveat shown in the UI, not hidden: the Web Speech API (the P4-1
- * transcription source for now) always listens on the system's default
- * input device -- it has no way to target a specific device. The picker
- * here still matters for the level check itself, and will matter for real
- * once a getUserMedia-based source (e.g. Amazon Transcribe) replaces it.
+ * shown once before the presenter first turns the mic on. The chosen
+ * device is passed to `onConfirm` and used for real by the ElevenLabs
+ * source (P4-1) -- the Web Speech API fallback can't target a specific
+ * device (it always listens on the system default), a limitation stated in
+ * the UI copy below rather than hidden.
  */
-export function showSoundCheck(onConfirm: () => void, onCancel: () => void): { destroy(): void } {
+export function showSoundCheck(
+  onConfirm: (deviceId: string | undefined) => void,
+  onCancel: () => void,
+): { destroy(): void } {
   const mic = new MicPcm();
   let selectedDeviceId: string | undefined;
 
@@ -33,15 +34,16 @@ export function showSoundCheck(onConfirm: () => void, onCancel: () => void): { d
       el("label", { class: "soundcheck__label" }, ["Microphone", deviceSelect]),
       el("div", { class: "soundcheck__level-track" }, [levelBar]),
       el("p", { class: "soundcheck__hint" }, [
-        "Say a few words -- the bar should move. Live transcription always uses your system's default microphone, whichever one is selected here.",
+        "Say a few words -- the bar should move. The microphone selected here is used for live transcription, unless it falls back to your browser's built-in speech recognition, which always uses your system's default device instead.",
       ]),
       el("p", { class: "soundcheck__consent" }, [
-        // P4-10: audio is never stored on our side. Today's transcription source (Web
-        // Speech API, see speech/webSpeech.ts) sends audio to your browser's speech
-        // recognition service (Google's, in Chrome) to produce the live transcript --
-        // this is disclosed, not hidden, and will read differently once a
-        // privacy-reviewed EU-region provider (Amazon Transcribe) replaces it.
-        "Starting the microphone sends your speech to your browser's built-in speech recognition service to generate a live transcript. We never store the audio ourselves.",
+        // P4-10: audio is never stored on our side either way. Today's
+        // transcription source is ElevenLabs Scribe (processed on US
+        // infrastructure on the self-serve tier we use), falling back to
+        // your browser's own speech recognition service if that's
+        // unavailable -- disclosed here, not hidden. Neither is the
+        // EU-region provider P4-10 originally asked for (Amazon Transcribe).
+        "Starting the microphone sends your speech to a third-party speech recognition service (ElevenLabs, or your browser's built-in recognizer if that's unavailable) to generate a live transcript. We never store the audio ourselves.",
       ]),
       el("div", { class: "soundcheck__actions" }, [cancelButton, startButton]),
     ]),
@@ -90,8 +92,9 @@ export function showSoundCheck(onConfirm: () => void, onCancel: () => void): { d
   }
 
   startButton.addEventListener("click", () => {
+    const deviceId = selectedDeviceId;
     cleanup();
-    onConfirm();
+    onConfirm(deviceId);
   });
   cancelButton.addEventListener("click", () => {
     cleanup();

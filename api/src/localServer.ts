@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { MAX_IMAGE_BYTES } from "@flowio/shared";
 import { DevVerifier } from "./auth/devVerifier.js";
+import { createTranscriptionToken } from "./elevenlabs/createTranscriptionToken.js";
 import { createDeck, deleteDeck, getDeck, listDecks, updateDeck } from "./handlers.js";
 import { logger } from "./logger.js";
 import { MemoryDeckStore } from "./store/memoryStore.js";
@@ -17,6 +18,12 @@ import { LocalUploadPresigner } from "./uploads/localPresigner.js";
  * see `src/auth/devVerifier.ts`) -- there's nothing to sign in against
  * locally until Cognito is deployed.
  */
+
+try {
+  process.loadEnvFile(); // picks up ELEVENLABS_API_KEY from a local .env, if present (P4-1)
+} catch {
+  // No .env file: rely on the environment as it is.
+}
 
 const PORT = Number(process.env.PORT ?? 8787);
 const store = new MemoryDeckStore();
@@ -109,6 +116,12 @@ const server = createServer(async (req, res) => {
         return;
       }
       const result = await createUploadUrl(presigner, auth, body);
+      send(result.status, result.ok ? result.body : result);
+      return;
+    }
+
+    if (req.method === "POST" && url.pathname === "/transcription-token") {
+      const result = await createTranscriptionToken(auth, process.env.ELEVENLABS_API_KEY);
       send(result.status, result.ok ? result.body : result);
       return;
     }

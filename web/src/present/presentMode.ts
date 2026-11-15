@@ -21,6 +21,8 @@ export interface PresenterHandlers {
 export interface Presenter {
   /** Flips the mic directly -- used by `onMicToggleRequested` once it's decided it's safe to. */
   setMicOn(on: boolean): void;
+  /** P4-6: the sound check's chosen input device, applied the next time the mic turns on. */
+  setPreferredDeviceId(deviceId: string | undefined): void;
   /** What the 'm' key and a UI mic button should both call. */
   requestMicToggle(): void;
   setFollowing(on: boolean): void;
@@ -155,6 +157,9 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
     setMicOn(on) {
       engine.setMicOn(on);
       reportStatus();
+    },
+    setPreferredDeviceId(deviceId) {
+      engine.setPreferredDeviceId(deviceId);
     },
     requestMicToggle() {
       const turnOn = !engine.micOn;

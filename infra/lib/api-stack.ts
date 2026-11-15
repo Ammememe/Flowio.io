@@ -193,6 +193,20 @@ export class ApiStack extends Stack {
       MEDIA_BASE_URL: mediaBaseUrl,
     });
 
+    // P4-1: ElevenLabs Scribe needs a real API key from https://elevenlabs.io
+    // -- not something this stack can create. Set ELEVENLABS_API_KEY before
+    // `cdk deploy` to turn it on; without it the endpoint returns 501 and
+    // the web app falls back to the Web Speech API (same pattern as
+    // GOOGLE_CLIENT_ID/SECRET above). A Lambda env var, not Secrets Manager,
+    // to match that same pattern -- still encrypted at rest, just not
+    // independently rotatable. Worth moving to Secrets Manager if this ever
+    // needs rotation without a redeploy.
+    const createTranscriptionTokenFn = makeFn(
+      "create-transcription-token",
+      "../api/src/lambda/createTranscriptionToken.ts",
+      { ...authEnv, ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY ?? "" },
+    );
+
     decksTable.grantWriteData(createDeckFn);
     decksTable.grantReadData(getDeckFn);
     decksTable.grantReadData(listDecksFn); // covers Query against the GSI too
@@ -246,6 +260,11 @@ export class ApiStack extends Stack {
       methods: [HttpMethod.POST],
       integration: new HttpLambdaIntegration("CreateUploadUrlIntegration", createUploadUrlFn),
     });
+    httpApi.addRoutes({
+      path: "/transcription-token",
+      methods: [HttpMethod.POST],
+      integration: new HttpLambdaIntegration("CreateTranscriptionTokenIntegration", createTranscriptionTokenFn),
+    });
 
     this.apiUrl = httpApi.apiEndpoint;
 
@@ -260,6 +279,9 @@ export class ApiStack extends Stack {
     new CfnOutput(this, "CognitoHostedUiDomain", {
       value: userPoolDomain.baseUrl(),
       description: "Set as VITE_COGNITO_DOMAIN for the web app.",
+    });
+    new CfnOutput(this, "ElevenLabsConfigured", {
+      value: process.env.ELEVENLABS_API_KEY ? "yes" : "no (falls back to Web Speech API)",
     });
   }
 }
