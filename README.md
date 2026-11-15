@@ -142,6 +142,74 @@ still a contained follow-up, not a rewrite.
 **Not done:** P4-9 (usage metering) and real pilot testing (P4-11, which
 needs actual presenters, not something to automate).
 
+## Ask Claude to build a deck (Phase 5, in progress)
+
+An MCP server (`mcp/`) gives a Claude chat nine tools to read and write
+decks -- `list_themes`, `list_layouts`, `list_decks`, `get_deck`,
+`create_deck`, `add_slide`, `update_slide`, `delete_slide`, `reorder_slides`.
+Every write hands back the deck's editor link, and an already-open editor
+picks the change up on its own within a few seconds (polls while there's
+nothing unsaved locally -- P5-7).
+
+Real Cognito sign-in from Claude's custom connector (P5-1) is being done
+*last* in this phase, deliberately, so the tools themselves get tested
+first -- see `mcp/README.md` for exactly how. Two ways to run it:
+
+- **Local** (`pnpm --filter mcp run dev`, stdio): talks to the local dev
+  API with the same dev-stand-in identity the web app's local sign-in uses,
+  so what Claude builds shows up by signing into the local dashboard with
+  the same email.
+- **Deployed** (`McpUrl` stack output, Streamable HTTP): a real public
+  Lambda that writes straight to the live DynamoDB table, gated by a shared
+  secret instead of real auth in the meantime (`infra/README.md`). The
+  editor link it returns points at the real deployed site, but -- same
+  known gap as the deployed dashboard already has -- won't open in a
+  signed-in browser until P5-1 ships.
+
+```bash
+pnpm --filter api run dev   # terminal 1
+pnpm --filter mcp run dev   # terminal 2 -- add as a custom connector in Claude Desktop, see mcp/README.md
+```
+
+## Stage-ready presenting (Phase 6, in progress)
+
+Everything below is additional keys/panels in `/present.html`, plus a new
+companion page -- nothing here touches the Phase 4 matcher itself.
+
+- **Speaker notes (P6-1):** a "Speaker notes" panel in the editor, under
+  Cues -- shown in presenter view, never on the audience-facing slide.
+- **Presenter view (P6-2):** open `/presenter.html?deckId=...` (or the
+  "Presenter view" link in the editor) on your own screen while
+  `/present.html` is fullscreen on the projector/second monitor. Shows the
+  current slide, what's next, speaker notes, and an elapsed timer. The two
+  windows stay in sync via a same-origin `BroadcastChannel` -- either one
+  can navigate, the other just follows.
+- **Live captions (P6-7):** `c` toggles a captions overlay fed by the same
+  transcript stream the matcher uses. Off by default.
+- **Advance suggestion (P6-6):** `a` toggles an opt-in nudge -- once the
+  *last* bullet on a slide has been the confident match for a few seconds,
+  a dismissible "looks like you're done, press → to advance" banner
+  appears. It only ever suggests; nothing advances on its own.
+- **Voice analyzer (P6-3/P6-4/P6-5):** `v` toggles loudness+pitch analysis
+  of your own voice (a second, independent microphone stream -- off by
+  default, same "disclosed, not hidden" stance as the sound check). The
+  first 30 seconds calibrate to *your* voice specifically, so a naturally
+  loud or quiet speaker isn't misread; after that, speaking louder or at a
+  different pitch than your own calibrated average makes the current
+  highlight glow a bit more intensely -- it never changes *which* bullet is
+  highlighted, only how strongly, and it reacts within ~130ms rather than
+  waiting for a full sentence to transcribe.
+
+**Not done from the voice analyzer's own plan item:** speaking pace from
+the transcript's word timings. ElevenLabs' real-time protocol has a
+`committed_transcript_with_timestamps` message that should carry per-word
+timing, but there's no official client for the raw wire protocol and
+nothing in this codebase has inspected a real payload to confirm its exact
+shape -- guessing a field name and parsing speculatively felt worse than
+just not claiming the feature, since it would silently never fire if the
+guess were wrong. Loudness and pitch, the two things verifiable with a
+synthetic signal (see `web/test/present/pitchDetect.test.ts`), are done.
+
 ## Checks
 
 ```bash
@@ -159,9 +227,11 @@ pnpm --filter web run test:visual                     # P2-8 visual snapshot tes
 Both stacks, to the `dev` stage in `eu-north-1`:
 
 - Web: https://d2ikpxu6qtx85h.cloudfront.net
-- API: `Flowio-Api-dev`'s `ApiUrl` output (Cognito user pool, DynamoDB, 7
+- API: `Flowio-Api-dev`'s `ApiUrl` output (Cognito user pool, DynamoDB, 8
   Lambdas, media bucket + its own CloudFront distribution, ElevenLabs
   credential vending backed by a real key in Secrets Manager)
+- MCP server: `Flowio-Api-dev`'s `McpUrl` output -- its own Lambda, its own
+  throttled HTTP API, gated by a shared secret in Secrets Manager (P5-2)
 
 Deployed manually (`cdk deploy`), not yet through `deploy.yml` -- the
 GitHub Actions OIDC role from P1-5 still isn't set up (see `infra/README.md`).
@@ -284,3 +354,64 @@ default of "slide 0" silently won if the presenter wasn't on the first
 slide when they turned the mic on -- fixed by tracking the current slide id
 independently and applying it the moment the matcher is created. The actual
 pilot (P4-11) is outside what this can self-certify.
+
+## Phase 5 status (in progress)
+
+| Issue | Status |
+| --- | --- |
+| P5-1 Sign-in spike: Claude's custom connector against Cognito | **Deliberately deferred to last**, so the tools below get tested without real auth in the way first (explicit choice, not an oversight) |
+| P5-2 MCP server package, TypeScript SDK, Streamable HTTP, deployed as a Lambda | **Done and deployed** -- `mcp/src/lambda.ts`, stateless `WebStandardStreamableHTTPServerTransport` (a fresh server per request, JSON responses, no SSE -- fits Lambda's buffered-response model), behind its own API Gateway HTTP API (`McpUrl` output). `stdio.ts` still exists too, for Claude Desktop/local testing |
+| P5-3 Read tools: `list_themes`, `list_layouts`, `get_deck`, `list_decks` | Done -- `mcp/src/tools.ts` |
+| P5-4 Write tools: `create_deck`, `add_slide`, `update_slide`, `delete_slide`, `reorder_slides` | Done |
+| P5-5 Tool inputs from the shared Zod schema, self-correctable validation errors | Done -- `layoutIds`/element shapes come from `@flowio/shared`; a bad value comes back as a structured MCP input-validation error naming the field and the allowed values |
+| P5-6 Cue fields, with tool descriptions nudging Claude to write them | Done -- `mcp/src/slideInput.ts`'s `cues` field description |
+| P5-7 Every write returns the deck link; an open editor refetches | Done -- write tools return `{deck, url}`; `web/src/editor/main.ts` polls every 4s and applies a newer version, but only while nothing is unsaved locally, so it can never clobber an in-progress edit |
+| P5-8 Rate limits and per-user quotas | Partial, honest stand-in: the deployed endpoint's HTTP API stage is throttled (2 req/s, burst 5) via API Gateway. Real **per-user** quotas aren't meaningful yet -- there's only one fixed pre-auth identity -- so this is a blunt, global limit until P5-1 gives there something to key quotas on |
+| P5-9 Test with MCP Inspector, then as a Claude custom connector; setup guide | Partly done -- every tool verified end-to-end against **both** backends: locally over stdio, and for real over the public Streamable HTTP Lambda (`StreamableHTTPClientTransport` against the live `McpUrl`, with and without the shared secret). Not run through the Inspector's own UI specifically (equivalent scripted coverage instead, see `mcp/README.md`), and not yet added as a real Claude.ai custom connector -- claude.ai's connector flow is OAuth-oriented and wasn't checked by hand for a static-header option, so that may need P5-1 regardless. `mcp/README.md` has the setup steps for both paths |
+| P5-10 Optional: inline slide preview via MCP Apps | Not done -- optional, skipped for now |
+
+**Exit test** ("in Claude, 'make a 6-slide deck about airplanes in the
+animated theme' produces a deck that opens in the app and follows speech
+when presented"): the deck-building half is verified against real deployed
+infrastructure -- a scripted client drove `create_deck`/`add_slide`/etc.
+through the live public Lambda exactly as Claude would, writing straight to
+the real DynamoDB table, and the resulting deck opened correctly in the real
+editor (and, via the sample deck, Phase 4 presents it with live following).
+The literal "ask Claude in a chat window" half needs either Claude Desktop
+(works today, `mcp/README.md`) or a real claude.ai custom connector, which
+most likely needs P5-1's OAuth regardless of anything else here.
+
+One real bug was caught and fixed deploying this: `DynamoDeckStore` rejected
+any deck with an unset optional field (e.g. a slide's `notes`) when written
+by a caller that builds the object in-process rather than through JSON --
+JSON serialization drops `undefined` keys for free, which is why this never
+surfaced through the regular HTTP API, only through the MCP Lambda's direct
+DynamoDB calls. Fixed with `removeUndefinedValues: true` on the document
+client (`api/src/store/dynamoStore.ts`), which benefits every caller, not
+just this one.
+
+## Phase 6 status (in progress)
+
+| Issue | Status |
+| --- | --- |
+| P6-1 Speaker notes in the schema and the editor | Done -- the schema already reserved `notes` back in Phase 1; added the editor panel (`web/src/editor/notesEditor.ts`) |
+| P6-2 Presenter view with notes, next slide and a timer, synced to a separate audience window | Done -- `presenter.html`, synced to `present.html` over a `BroadcastChannel` (`web/src/present/presenterSync.ts`). Verified live in two real browser tabs: presenter view's Next button drove the audience window, and navigating the audience window directly updated presenter view's notes/slide, both directions confirmed |
+| P6-3 Voice analyzer: loudness and pitch in an AudioWorklet, pace from word timings | Loudness + pitch done (`web/public/voice-analysis-worklet.js`, autocorrelation pitch detection unit-tested against synthetic sine waves). Pace from word timings **not done** -- see the "Stage-ready presenting" section above for why |
+| P6-4 Calibrate to each speaker during the first 30 seconds | Done -- `web/src/present/voiceBaseline.ts`, a speaker's own running mean/stddev of loudness (and pitch, when voiced) built up over the first 30s before anything is scored against it |
+| P6-5 Map the emphasis score to animation intensity, with a setting to switch the analyzer off | Done -- the voice analyzer's score modulates (never decides) the matcher's emphasis intensity in `liveEngine.ts`'s tick; off by default, `v` toggles it |
+| P6-6 Opt-in suggestion to advance when the last bullet on a slide is done | Done -- `web/src/present/lastBulletTracker.ts` (5 unit tests), `a` toggles it, off by default |
+| P6-7 Live captions overlay | Done -- off by default, `c` toggles it |
+| P6-8 Poor-network mode: deck assets cached locally and an on-device speech fallback | Not done |
+| P6-9 Billing with Stripe: plans limited by transcription minutes | Not done |
+| P6-10 Cost and load review: cost per presenting hour, and behaviour with many simultaneous talks | Not done |
+
+**Exit test** ("a 20-minute talk on conference Wi-Fi runs without the
+presenter touching the laptop except to change slides"): not attempted --
+P6-8 (poor-network mode) isn't built, and this needs an actual 20-minute
+talk to mean anything regardless. P6-2's sync and P6-6/P6-7's toggles were
+verified live in a real browser; P6-3/4/5's actual loudness/pitch
+thresholds against a real voice haven't been verified by a human yet --
+the pure calibration/scoring math is unit-tested (`voiceBaseline.test.ts`),
+but numbers like "0.3 standard deviations" only mean something once
+someone actually talks into a real microphone and judges whether the
+highlight's reaction feels right.

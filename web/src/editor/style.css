@@ -184,6 +184,17 @@ body {
   font-size: 12px;
 }
 
+.notes-editor__textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+}
+
 /* Inline Tiptap editors mounted on the slide content (data-element-id nodes) */
 .inline-editable {
   outline: none;

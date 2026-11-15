@@ -1,5 +1,5 @@
 import { CfnOutput, Duration, RemovalPolicy, SecretValue, Stack, type StackProps } from "aws-cdk-lib";
-import { HttpApi, CorsHttpMethod, HttpMethod } from "aws-cdk-lib/aws-apigatewayv2";
+import { HttpApi, HttpStage, CorsHttpMethod, HttpMethod } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import {
   AccountRecovery,
@@ -212,6 +212,50 @@ export class ApiStack extends Stack {
     );
     elevenLabsSecret.grantRead(createTranscriptionTokenFn);
 
+    // ---- P5-2: MCP server for Claude -----------------------------------
+    // Deployed as its own Lambda + HTTP API, deliberately separate from the
+    // Cognito-gated deck API above: P5-1 (real sign-in from Claude) is being
+    // done last on purpose, so this calls the deck handlers directly against
+    // DynamoDB instead (see `mcp/src/directBackend.ts`) and is gated by a
+    // shared secret instead of a real identity (`mcp/src/mcpSecret.ts`) --
+    // created out-of-band with the AWS CLI, same reasoning as the ElevenLabs
+    // key above. If the secret doesn't exist yet, every call cleanly 500s
+    // rather than silently accepting unauthenticated requests.
+    const mcpSharedSecretName = `flowio-mcp-shared-secret-${stage}`;
+    const mcpSharedSecret = Secret.fromSecretNameV2(this, "McpSharedSecret", mcpSharedSecretName);
+    const mcpServerFn = makeFn("mcp-server", "../mcp/src/lambda.ts", {
+      ...deckTableEnv,
+      FLOWIO_MCP_DEV_EMAIL: process.env.FLOWIO_MCP_DEV_EMAIL ?? "claude@flowio.local",
+      MCP_SHARED_SECRET_NAME: mcpSharedSecretName,
+      // So returned editor links point at the real deployed site, not the
+      // default `localhost:5174` `mcp/src/env.ts` falls back to -- the first
+      // non-localhost entry in the same list Cognito's callback URLs use.
+      FLOWIO_WEB_URL: webAppUrls.find((url) => !url.startsWith("http://localhost")) ?? webAppUrls[0],
+    });
+    decksTable.grantReadWriteData(mcpServerFn);
+    mcpSharedSecret.grantRead(mcpServerFn);
+
+    // Its own HTTP API (not a route on the one below): an unrelated blast
+    // radius from the real deck API, and its own throttle -- a blunt stand-in
+    // for P5-8's per-user quotas, since there's only one fixed identity to
+    // quota until P5-1 exists. No CORS: every caller is a server (an MCP
+    // client), never a browser page.
+    const mcpHttpApi = new HttpApi(this, "McpHttpApi", {
+      apiName: `flowio-mcp-${stage}`,
+      createDefaultStage: false,
+    });
+    new HttpStage(this, "McpStage", {
+      httpApi: mcpHttpApi,
+      stageName: "$default",
+      autoDeploy: true,
+      throttle: { rateLimit: 2, burstLimit: 5 },
+    });
+    mcpHttpApi.addRoutes({
+      path: "/mcp",
+      methods: [HttpMethod.POST],
+      integration: new HttpLambdaIntegration("McpIntegration", mcpServerFn),
+    });
+
     decksTable.grantWriteData(createDeckFn);
     decksTable.grantReadData(getDeckFn);
     decksTable.grantReadData(listDecksFn); // covers Query against the GSI too
@@ -289,6 +333,15 @@ export class ApiStack extends Stack {
       value: elevenLabsSecretName,
       description:
         "Create this with `aws secretsmanager create-secret --name <value> --secret-string <key>` if it doesn't exist yet; without it the endpoint 501s and the web app falls back to the Web Speech API.",
+    });
+    new CfnOutput(this, "McpUrl", {
+      value: `${mcpHttpApi.apiEndpoint}/mcp`,
+      description: "Streamable HTTP endpoint for the MCP server -- add as a custom connector, with the shared secret below as a bearer token.",
+    });
+    new CfnOutput(this, "McpSharedSecretName", {
+      value: mcpSharedSecretName,
+      description:
+        "Create with `aws secretsmanager create-secret --name <value> --secret-string <random value>` if it doesn't exist yet; without it every MCP call 500s. Send the same value back as `Authorization: Bearer <value>`.",
     });
   }
 }

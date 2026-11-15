@@ -6,13 +6,14 @@ export default defineConfig({
   build: {
     rollupOptions: {
       // index.html: P1-6 hello world. present.html: Phase 2 present mode.
-      // signin/dashboard/editor.html: Phase 3.
+      // signin/dashboard/editor.html: Phase 3. presenter.html: Phase 6 (P6-2).
       input: {
         main: path.resolve(import.meta.dirname, "index.html"),
         present: path.resolve(import.meta.dirname, "present.html"),
         signin: path.resolve(import.meta.dirname, "signin.html"),
         dashboard: path.resolve(import.meta.dirname, "dashboard.html"),
         editor: path.resolve(import.meta.dirname, "editor.html"),
+        presenter: path.resolve(import.meta.dirname, "presenter.html"),
       },
     },
   },

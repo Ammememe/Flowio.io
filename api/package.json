@@ -4,6 +4,14 @@
   "version": "0.0.1",
   "description": "Deck API: Lambda handlers behind API Gateway, backed by DynamoDB and Cognito auth (P3-1/P3-2/P3-8).",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "scripts": {
     "dev": "node --import tsx src/localServer.ts",
     "build": "tsc -p tsconfig.json",

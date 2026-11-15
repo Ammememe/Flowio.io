@@ -16,6 +16,7 @@
         <button id="redo" class="icon" type="button" title="Redo">↷</button>
       </div>
       <span id="save-status" class="editor-topbar__status"></span>
+      <a id="presenter-link" class="secondary editor-topbar__present" target="_blank" rel="noopener">Presenter view</a>
       <a id="present-link" class="secondary editor-topbar__present" target="_blank" rel="noopener">Present</a>
     </header>
 
@@ -31,6 +32,10 @@
         <h3>Cues</h3>
         <p class="editor-inspector__hint">Phrases the speaker is likely to say for this bullet. Used by the live matcher (Phase 4) and by Claude (Phase 5) when it writes a deck for you.</p>
         <div id="cue-editor"></div>
+
+        <h3>Speaker notes</h3>
+        <p class="editor-inspector__hint">Shown in presenter view (Phase 6), never on the audience-facing slide.</p>
+        <div id="notes-editor"></div>
       </aside>
     </div>
 

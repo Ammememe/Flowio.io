@@ -1,5 +1,8 @@
 import type { Deck, Slide } from "@flowio/shared";
+import { createLastBulletTracker } from "./lastBulletTracker.js";
+import { createVoiceAnalyzer } from "./voiceAnalyzer.js";
 import { DEFAULT_CONFIG, Matcher } from "../match/matcher.js";
+import { emphasisTargets } from "../match/targets.js";
 import { loadWorkerEmbedder, MODELS, type WorkerEmbedder } from "../match/workerEmbedder.js";
 import type { EmphasisState } from "../render/types.js";
 import { ElevenLabsSource } from "../speech/elevenLabsSource.js";
@@ -16,6 +19,14 @@ export type ListeningStatus = "idle" | "starting" | "listening" | "reconnecting"
 export interface LiveEngineHandlers {
   onEmphasis(state: EmphasisState): void;
   onStatusChange(status: ListeningStatus, detail?: string): void;
+  /** P6-7: raw transcript text for an on-screen captions overlay -- independent of `following`, so captions keep moving even while emphasis is paused. */
+  onTranscript?(text: string, isFinal: boolean): void;
+  /** P6-6: fires once per slide, when the last bullet has been the confident match for a sustained moment. Opt-in at the caller -- the engine always computes it, `presentMode.ts` decides whether to act on it. */
+  onLastBulletDone?(): void;
+  /** P6-3/P6-4: the voice analyzer's state, while it's running (see `setVoiceAnalyzerOn`). */
+  onVoiceAnalyzerChange?(score: number, calibrating: boolean): void;
+  /** The analyzer's own `getUserMedia` call failed (e.g. permission denied) -- it stays off; nothing else about the mic/matcher is affected. */
+  onVoiceAnalyzerError?(message: string): void;
 }
 
 export interface LiveEngine {
@@ -28,6 +39,9 @@ export interface LiveEngine {
   setFollowing(on: boolean): void;
   /** P4-5: manual control always wins -- call this whenever the presenter overrides the highlight by hand. */
   notifyManualOverride(): void;
+  /** P6-5: on/off for the voice analyzer -- runs (and its score modulates emphasis intensity) only while this AND the mic are both on. Off by default (P6-3's doc comment explains why). */
+  setVoiceAnalyzerOn(on: boolean): void;
+  readonly voiceAnalyzerOn: boolean;
   destroy(): void;
 }
 
@@ -35,6 +49,8 @@ const TICK_MS = 250;
 const MANUAL_OVERRIDE_MS = 4000;
 const RECONNECT_DELAY_MS = 3000;
 const MAX_RECONNECT_ATTEMPTS = 5;
+/** P6-6: how long the last bullet must stay the confident match before suggesting "advance". */
+const LAST_BULLET_HOLD_MS = 3000;
 
 /**
  * P4-4: wires the matcher (P4-2) up to the emphasis interface (P2-6) via a
@@ -55,6 +71,33 @@ export function createLiveEngine(deck: Deck, handlers: LiveEngineHandlers): Live
   let lastEmphasis: EmphasisState = { activeElementId: null, intensity: 0 };
   let currentSlideId = deck.slides[0].id;
   let preferredDeviceId: string | undefined;
+  // P6-6: id of the current slide's last emphasisable element.
+  let lastTargetId = lastTargetIdFor(currentSlideId);
+  const lastBulletTracker = createLastBulletTracker();
+
+  // P6-3/P6-4/P6-5: opt-in loudness/pitch analyzer, independent of the mic
+  // above (see voiceAnalyzer.ts for why it needs its own capture stream).
+  let voiceAnalyzerOn = false;
+  const voiceAnalyzer = createVoiceAnalyzer({
+    onScoreChange: (score, calibrating) => handlers.onVoiceAnalyzerChange?.(score, calibrating),
+  });
+
+  function syncVoiceAnalyzer(): void {
+    if (micOn && voiceAnalyzerOn) {
+      voiceAnalyzer.start(preferredDeviceId).catch((err) => {
+        handlers.onVoiceAnalyzerError?.(err instanceof Error ? err.message : String(err));
+      });
+    } else {
+      voiceAnalyzer.stop();
+    }
+  }
+
+  function lastTargetIdFor(slideId: string): string | null {
+    const slide = deck.slides.find((s) => s.id === slideId);
+    if (!slide) return null;
+    const targets = emphasisTargets(slide);
+    return targets.length > 0 ? targets[targets.length - 1].id : null;
+  }
 
   // P4-3: embed titles/bullets/cues once the deck loads, in the background --
   // keyword-only matching still works while the model downloads (or if it
@@ -100,11 +143,24 @@ export function createLiveEngine(deck: Deck, handlers: LiveEngineHandlers): Live
     const result = await matcher.tick(now);
     if (!result || destroyed) return;
     const row = result.rows.find((r) => r.id === result.active);
-    lastEmphasis = {
-      activeElementId: result.active,
-      intensity: row ? Math.max(0, Math.min(1, row.score)) : 0,
-    };
+    let intensity = row ? Math.max(0, Math.min(1, row.score)) : 0;
+    // P6-5: vocal energy modulates how strongly an already-active bullet is
+    // emphasised -- it never decides *which* bullet (that stays the
+    // matcher's call, above), and it never lights up an inactive one
+    // (intensity 0 stays 0 regardless of the multiplier).
+    if (voiceAnalyzerOn && result.active) {
+      intensity *= 0.7 + 0.3 * voiceAnalyzer.score;
+    }
+    lastEmphasis = { activeElementId: result.active, intensity };
     handlers.onEmphasis(lastEmphasis);
+
+    // P6-6: the last bullet became (or stayed) the confident match -- once
+    // it's held for a sustained moment, suggest moving on. Any other active
+    // target resets the clock, so a brief, noisy mismatch can't trigger it.
+    const isLastTargetActive = lastTargetId !== null && result.active === lastTargetId;
+    if (lastBulletTracker.tick(now, isLastTargetActive, LAST_BULLET_HOLD_MS)) {
+      handlers.onLastBulletDone?.();
+    }
   }
 
   function scheduleReconnect(): void {
@@ -122,6 +178,7 @@ export function createLiveEngine(deck: Deck, handlers: LiveEngineHandlers): Live
   function onTranscriptUpdate(update: { segmentId: string; text: string; isFinal: boolean }): void {
     reconnectAttempts = 0;
     matcher?.onTranscript(update.segmentId, update.text, performance.now());
+    handlers.onTranscript?.(update.text, update.isFinal);
   }
 
   function onSourceStatus(status: string): void {
@@ -197,12 +254,17 @@ export function createLiveEngine(deck: Deck, handlers: LiveEngineHandlers): Live
     },
     setSlide(slide) {
       currentSlideId = slide.id;
+      lastTargetId = lastTargetIdFor(slide.id);
+      lastBulletTracker.reset();
       matcher?.setSlide(slide.id);
     },
     setMicOn(on) {
       if (on === micOn) return;
-      if (on) void startMic();
-      else stopMic();
+      if (on) void startMic().then(syncVoiceAnalyzer);
+      else {
+        stopMic();
+        syncVoiceAnalyzer();
+      }
     },
     setPreferredDeviceId(deviceId) {
       preferredDeviceId = deviceId;
@@ -215,9 +277,17 @@ export function createLiveEngine(deck: Deck, handlers: LiveEngineHandlers): Live
     notifyManualOverride() {
       manualUntil = performance.now() + MANUAL_OVERRIDE_MS;
     },
+    get voiceAnalyzerOn() {
+      return voiceAnalyzerOn;
+    },
+    setVoiceAnalyzerOn(on) {
+      voiceAnalyzerOn = on;
+      syncVoiceAnalyzer();
+    },
     destroy() {
       destroyed = true;
       stopMic();
+      voiceAnalyzer.stop();
       void embedderReady.then((e) => e?.dispose());
     },
   };

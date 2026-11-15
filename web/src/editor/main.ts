@@ -7,6 +7,7 @@ import { createAutosave, type SaveStatus } from "./autosave.js";
 import { renderCueEditor } from "./cueEditor.js";
 import { renderEditorCanvas, type EditorCanvasHandle } from "./editorCanvas.js";
 import { History } from "./history.js";
+import { renderNotesEditor } from "./notesEditor.js";
 import { renderPickers } from "./pickers.js";
 import { renderSlideList } from "./slideList.js";
 import "./style.css";
@@ -26,14 +27,17 @@ const slideListEl = document.querySelector<HTMLUListElement>("#slide-list")!;
 const addSlideEl = document.querySelector<HTMLDivElement>("#add-slide")!;
 const canvasEl = document.querySelector<HTMLDivElement>("#editor-canvas")!;
 const cueEditorEl = document.querySelector<HTMLDivElement>("#cue-editor")!;
+const notesEditorEl = document.querySelector<HTMLDivElement>("#notes-editor")!;
 const statusEl = document.querySelector<HTMLSpanElement>("#save-status")!;
 const undoButton = document.querySelector<HTMLButtonElement>("#undo")!;
 const redoButton = document.querySelector<HTMLButtonElement>("#redo")!;
 const presentLink = document.querySelector<HTMLAnchorElement>("#present-link")!;
+const presenterLink = document.querySelector<HTMLAnchorElement>("#presenter-link")!;
 const conflictBanner = document.querySelector<HTMLParagraphElement>("#conflict-banner")!;
 const reloadButton = document.querySelector<HTMLButtonElement>("#reload-deck")!;
 
 presentLink.href = `/present.html?deckId=${deckId}`;
+presenterLink.href = `/presenter.html?deckId=${deckId}`;
 
 // ---- State -------------------------------------------------------------
 let deck: Deck;
@@ -42,8 +46,11 @@ let canvasHandle: EditorCanvasHandle | undefined;
 const history = new History<Deck>();
 let historyDebounce: ReturnType<typeof setTimeout> | undefined;
 
+let hasUnsavedLocalEdits = false;
+
 const autosave = createAutosave(deckId, {
   onStatusChange(status: SaveStatus, message?: string) {
+    hasUnsavedLocalEdits = status !== "saved";
     statusEl.textContent = statusLabel(status, message);
     if (status === "conflict") conflictBanner.hidden = false;
   },
@@ -207,12 +214,24 @@ function renderCueEditorUi(): void {
   });
 }
 
+function renderNotesEditorUi(): void {
+  const slide = deck.slides[currentSlideIndex];
+  renderNotesEditor(slide, notesEditorEl, {
+    onNotesChange(notes) {
+      slide.notes = notes;
+      saveNow();
+      pushHistoryDebounced();
+    },
+  });
+}
+
 /** Full re-render after the current slide identity changed (select/add/duplicate/delete/reorder). */
 function selectSlide(): void {
   renderSlideListUi();
   renderPickersUi();
   renderCanvas();
   renderCueEditorUi();
+  renderNotesEditorUi();
 }
 
 // ---- Top bar wiring --------------------------------------------------
@@ -266,4 +285,30 @@ async function load(): Promise<void> {
   selectSlide();
 }
 
+/**
+ * P5-7: picks up changes made elsewhere (by Claude, through the MCP server,
+ * or another tab) without the presenter having to hit reload themselves.
+ * Only applies them while there's nothing unsaved locally, so a poll can
+ * never clobber an in-progress edit -- that case still goes through the
+ * existing version-conflict banner instead.
+ */
+async function pollForRemoteChanges(): Promise<void> {
+  if (hasUnsavedLocalEdits) return;
+  let fresh: Deck;
+  try {
+    fresh = await getDeck(deckId!);
+  } catch {
+    return; // transient network error -- try again on the next tick
+  }
+  if (fresh.version <= deck.version) return;
+  deck = fresh;
+  currentSlideIndex = Math.min(currentSlideIndex, deck.slides.length - 1);
+  titleInput.value = deck.title;
+  history.push(deck);
+  updateUndoRedoButtons();
+  selectSlide();
+  statusEl.textContent = "Updated elsewhere";
+}
+
 void load();
+setInterval(() => void pollForRemoteChanges(), 4000);

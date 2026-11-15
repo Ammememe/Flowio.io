@@ -44,6 +44,64 @@ body {
   display: none;
 }
 
+/* P6-3/P6-4/P6-5: the voice analyzer's own status, separate from the transcription status above. */
+.voice-status {
+  position: fixed;
+  left: 12px;
+  bottom: 38px;
+  z-index: 10;
+  font: 12px/1.4 system-ui, sans-serif;
+  color: #e8edf2;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.voice-status[hidden] {
+  display: none;
+}
+
+/* P6-7: live captions overlay, off by default (toggle with 'c'). */
+.captions {
+  position: fixed;
+  left: 50%;
+  bottom: 56px;
+  transform: translateX(-50%);
+  z-index: 10;
+  max-width: 80vw;
+  text-align: center;
+  font: 20px/1.4 system-ui, sans-serif;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 8px 18px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+.captions[hidden] {
+  display: none;
+}
+.captions:empty {
+  display: none;
+}
+
+/* P6-6: an opt-in, dismissable "looks like you're done" nudge -- never auto-advances. */
+.advance-suggestion {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  font: 13px/1.4 system-ui, sans-serif;
+  color: #1a1f24;
+  background: #fde68a;
+  padding: 8px 16px;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.advance-suggestion[hidden] {
+  display: none;
+}
+
 .live-mic-button {
   position: fixed;
   left: 12px;

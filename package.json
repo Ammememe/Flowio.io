@@ -13,6 +13,7 @@
     "lint": "pnpm -r --if-present run lint",
     "dev:web": "pnpm --filter web run dev",
     "dev:api": "pnpm --filter api run dev",
+    "dev:mcp": "pnpm --filter mcp run dev",
     "synth": "pnpm --filter infra run synth"
   },
   "devDependencies": {

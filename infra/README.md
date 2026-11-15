@@ -52,6 +52,31 @@ less capable. To rotate the key later: `aws secretsmanager put-secret-value`
 with the new value -- no redeploy needed, the Lambda re-reads it on its next
 cold start.
 
+### MCP server shared secret (P5-2)
+
+The MCP server (`mcp/`) is deployed as its own Lambda + HTTP API
+(`McpUrl`/`McpSharedSecretName` in the stack outputs), separate from the
+deck API above and gated by a shared secret instead of real sign-in --
+P5-1 (OAuth from Claude's custom connector) is being done last, on purpose.
+Same out-of-band pattern as ElevenLabs above, just a secret this stack
+generates for itself rather than one from a third party:
+
+```bash
+aws secretsmanager create-secret \
+  --name flowio-mcp-shared-secret-<stage> \
+  --secret-string "$(openssl rand -hex 32)" \
+  --region eu-north-1
+```
+
+Without it, every call to the MCP endpoint cleanly 500s rather than
+silently accepting unauthenticated requests. Send the same value back as
+`Authorization: Bearer <value>` from any MCP client -- see `mcp/README.md`
+for the Claude custom-connector config. The endpoint's own HTTP API stage
+is throttled (2 req/s, burst 5) as a blunt stand-in for P5-8's per-user
+quotas, since there's only one fixed identity to quota until P5-1 exists.
+Rotate the same way as the ElevenLabs key: `put-secret-value`, no redeploy
+needed.
+
 ## Deploying
 
 Both stacks are live in `dev`/`eu-north-1` (see the root README's "What's

@@ -16,6 +16,17 @@ export interface PresenterHandlers {
    * if not provided.
    */
   onMicToggleRequested?(turnOn: boolean): void;
+  /** P6-2: lets a separate presenter-view window stay in sync with this (the audience window). */
+  onSlideChange?(index: number): void;
+  /** P6-7: live captions overlay, off by default -- toggled with 'c'. */
+  onCaptionsToggle?(on: boolean): void;
+  onCaptionUpdate?(text: string): void;
+  /** P6-6: fires once per slide, only while the opt-in setting below is on. A suggestion, never an automatic advance. */
+  onAdvanceSuggested?(): void;
+  /** P6-3/P6-4: the voice analyzer's state, only while it's on (off by default -- 'v' key). */
+  onVoiceAnalyzerChange?(score: number, calibrating: boolean): void;
+  onVoiceAnalyzerError?(message: string): void;
+  onVoiceAnalyzerToggle?(on: boolean): void;
 }
 
 export interface Presenter {
@@ -26,8 +37,20 @@ export interface Presenter {
   /** What the 'm' key and a UI mic button should both call. */
   requestMicToggle(): void;
   setFollowing(on: boolean): void;
+  /** P6-2: navigates to an absolute slide index -- what a presenter-view window's prev/next calls to drive this one. */
+  goToSlide(index: number): void;
+  /** P6-7: live captions overlay on/off -- what the 'c' key and a UI button both call. */
+  setCaptionsOn(on: boolean): void;
+  /** P6-6: opt-in "advance?" suggestions on/off -- what the 'a' key calls. Off by default. */
+  setAdvanceSuggestionsOn(on: boolean): void;
+  /** P6-5: opt-in voice analyzer on/off -- what the 'v' key calls. Off by default. */
+  setVoiceAnalyzerOn(on: boolean): void;
+  readonly slideIndex: number;
   readonly micOn: boolean;
   readonly following: boolean;
+  readonly captionsOn: boolean;
+  readonly advanceSuggestionsOn: boolean;
+  readonly voiceAnalyzerOn: boolean;
   destroy(): void;
 }
 
@@ -46,6 +69,8 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
   let emphasis: EmphasisState = { activeElementId: null, intensity: 0 };
   let listening: ListeningStatus = "idle";
   let listeningDetail: string | undefined;
+  let captionsOn = false;
+  let advanceSuggestionsOn = false;
 
   const engine = createLiveEngine(deck, {
     onEmphasis(state) {
@@ -55,6 +80,18 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
       listening = status;
       listeningDetail = detail;
       reportStatus();
+    },
+    onTranscript(text) {
+      if (captionsOn) handlers.onCaptionUpdate?.(text);
+    },
+    onLastBulletDone() {
+      if (advanceSuggestionsOn) handlers.onAdvanceSuggested?.();
+    },
+    onVoiceAnalyzerChange(score, calibrating) {
+      handlers.onVoiceAnalyzerChange?.(score, calibrating);
+    },
+    onVoiceAnalyzerError(message) {
+      handlers.onVoiceAnalyzerError?.(message);
     },
   });
   engine.setSlide(deck.slides[slideIndex]);
@@ -72,6 +109,7 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
     void exitSlide(previous, theme, direction);
     current = renderSlide(deck.slides[slideIndex], theme, container);
     engine.setSlide(deck.slides[slideIndex]);
+    handlers.onSlideChange?.(slideIndex);
   }
 
   function setTheme(next: ThemeTokens): void {
@@ -130,6 +168,18 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
       case "G":
         presenter.setFollowing(!engine.following);
         return;
+      case "c":
+      case "C":
+        presenter.setCaptionsOn(!captionsOn);
+        return;
+      case "a":
+      case "A":
+        presenter.setAdvanceSuggestionsOn(!advanceSuggestionsOn);
+        return;
+      case "v":
+      case "V":
+        presenter.setVoiceAnalyzerOn(!engine.voiceAnalyzerOn);
+        return;
       case "0":
       case "Escape":
         manualSetEmphasis({ activeElementId: null, intensity: 0 });
@@ -153,6 +203,32 @@ export function startPresenting(deck: Deck, container: HTMLElement, handlers: Pr
     },
     get following() {
       return engine.following;
+    },
+    get slideIndex() {
+      return slideIndex;
+    },
+    get captionsOn() {
+      return captionsOn;
+    },
+    get advanceSuggestionsOn() {
+      return advanceSuggestionsOn;
+    },
+    get voiceAnalyzerOn() {
+      return engine.voiceAnalyzerOn;
+    },
+    setVoiceAnalyzerOn(on) {
+      engine.setVoiceAnalyzerOn(on);
+      handlers.onVoiceAnalyzerToggle?.(on);
+    },
+    goToSlide(index) {
+      goTo(index, index >= slideIndex ? 1 : -1);
+    },
+    setCaptionsOn(on) {
+      captionsOn = on;
+      handlers.onCaptionsToggle?.(on);
+    },
+    setAdvanceSuggestionsOn(on) {
+      advanceSuggestionsOn = on;
     },
     setMicOn(on) {
       engine.setMicOn(on);

@@ -30,7 +30,15 @@ export class DynamoDeckStore implements DeckStore {
   ) {
     this.tableName = tableName;
     this.ownerIndexName = ownerIndexName;
-    this.docClient = DynamoDBDocumentClient.from(client);
+    // A deck's optional fields (e.g. a slide's `notes`) come through as
+    // literal `undefined` when callers build the object directly in-process
+    // rather than round-tripping it through JSON (which drops `undefined`
+    // keys for free) -- the MCP server's direct DynamoDB backend does this
+    // (`mcp/src/directBackend.ts`). Marshalling would otherwise reject the
+    // whole item.
+    this.docClient = DynamoDBDocumentClient.from(client, {
+      marshallOptions: { removeUndefinedValues: true },
+    });
   }
 
   async createDeck(ownerId: string, input: NewDeck): Promise<Deck> {
