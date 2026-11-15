@@ -50,7 +50,27 @@ export async function uploadImage(file: File): Promise<string> {
     if (!putRes.ok) throw new Error(`Upload failed: ${putRes.status}`);
   } else {
     const form = new FormData();
-    for (const [key, value] of Object.entries(presigned.fields)) form.append(key, value);
+    // S3's presigned-POST parser requires `key` and the X-Amz-* control
+    // fields in exactly this relative order, not interleaved with other
+    // fields -- confirmed against the real deployed bucket. The SDK's
+    // `fields` object does NOT return them in this order, and it only
+    // matters when signed with temporary credentials (Lambda's, unlike a
+    // long-lived IAM user's), which is why this only broke once deployed.
+    const reservedOrder = [
+      "key",
+      "X-Amz-Credential",
+      "X-Amz-Algorithm",
+      "X-Amz-Date",
+      "Policy",
+      "X-Amz-Security-Token",
+      "X-Amz-Signature",
+    ];
+    for (const [name, value] of Object.entries(presigned.fields)) {
+      if (!reservedOrder.includes(name)) form.append(name, value);
+    }
+    for (const name of reservedOrder) {
+      if (presigned.fields[name] !== undefined) form.append(name, presigned.fields[name]);
+    }
     form.append("file", file);
     const postRes = await fetch(presigned.uploadUrl, { method: "POST", body: form });
     if (!postRes.ok) throw new Error(`Upload failed: ${postRes.status}`);

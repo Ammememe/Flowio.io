@@ -30,6 +30,13 @@ export class S3UploadPresigner implements UploadPresigner {
       Conditions: [
         ["content-length-range", 0, maxSizeBytes],
         ["eq", "$Content-Type", contentType],
+        // Lambda signs with temporary STS credentials, which add an
+        // X-Amz-Security-Token field to the form -- S3 rejects the POST
+        // (plain "Access Denied", no detail) unless the policy has a
+        // matching condition for it. Long-lived credentials (e.g. a local
+        // IAM user) don't send this field, which is why this only breaks
+        // once deployed.
+        ["starts-with", "$x-amz-security-token", ""],
       ],
       Fields: { "Content-Type": contentType },
       Expires: 300, // seconds

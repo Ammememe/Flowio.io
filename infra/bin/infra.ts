@@ -14,12 +14,14 @@ const env = {
   region: process.env.CDK_DEFAULT_REGION ?? "eu-north-1",
 };
 
-// P3-1: Cognito Hosted UI callback/logout URLs. http://localhost:5174 lets
-// local dev sign in against the deployed pool. Add the real domain here
-// once P1-8 picks one -- there's no CloudFront URL to add automatically
-// until after WebStack's first deploy.
+// Origins the API/media CORS config and Cognito's Hosted UI callback/logout
+// URLs must allow. http://localhost:5174 is local dev; the CloudFront URL
+// is WebStack's dev domain, known only after its first deploy (chicken-
+// and-egg -- it couldn't be here before that deploy existed). Replace with
+// the real domain once P1-8 picks one.
 const webAppUrls = [
   "http://localhost:5174",
+  "https://d2ikpxu6qtx85h.cloudfront.net", // Flowio-Web-dev
   ...(process.env.EXTRA_WEB_APP_URL ? [process.env.EXTRA_WEB_APP_URL] : []),
 ];
 

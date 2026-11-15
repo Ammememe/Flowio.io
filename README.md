@@ -94,9 +94,38 @@ pnpm --filter web run test:visual                     # P2-8 visual snapshot tes
 
 ## What's deployed so far
 
-Nothing. `infra/README.md` has the one-time AWS setup (OIDC role, CDK
-bootstrap) needed before `cdk deploy` or the `deploy.yml` GitHub workflow
-can run for real.
+Both stacks, to the `dev` stage in `eu-north-1`:
+
+- Web: https://d2ikpxu6qtx85h.cloudfront.net
+- API: `Flowio-Api-dev`'s `ApiUrl` output (Cognito user pool, DynamoDB, 6
+  Lambdas, media bucket + its own CloudFront distribution)
+
+Deployed manually (`cdk deploy`), not yet through `deploy.yml` -- the
+GitHub Actions OIDC role from P1-5 still isn't set up (see `infra/README.md`).
+
+**Known gap:** the deployed site's sign-in (`/signin.html`) is still the
+local dev stand-in (P3-1) -- it produces a fake token the real deployed API
+correctly rejects (`401`, verified). Real decks only work end-to-end
+through the deployed API right now via a real Cognito token (verified by
+hand with the AWS CLI: create/list/get/update/409-on-conflict/delete/upload
+all confirmed against the live stack). The web app needs real Cognito
+Hosted UI auth wired in before a real user can sign in on the deployed site
+-- not yet done.
+
+Four real bugs were only visible once actually deployed (all fixed):
+1. The CDK bootstrap bucket's KMS key was disabled (pre-existing in this
+   AWS account) -- asset publishing failed until re-enabled.
+2. The media bucket's CORS rule had `allowedMethods: []` -- S3 rejected the
+   bucket creation outright ("XML ... did not validate").
+3. S3 presigned-POST uploads failed in Lambda (temporary STS credentials)
+   but worked from a local long-lived IAM user: the POST policy needed a
+   `starts-with x-amz-security-token` condition, *and* the multipart form
+   fields need `key` and the `X-Amz-*` fields in an exact relative order
+   that the SDK's own `fields` object isn't sorted into -- fixed in both
+   `api/src/uploads/s3Presigner.ts` and `web/src/api/upload.ts`.
+4. The API/media CORS allowlist only had `localhost` -- the deployed site's
+   own CloudFront origin was never allowed, so its own browser requests
+   were silently blocked until the real URL was added to `webAppUrls`.
 
 ## Phase 1 status
 
@@ -105,17 +134,17 @@ can run for real.
 | P1-1 Monorepo with pnpm workspaces | Done |
 | P1-2 Deck schema v1 in Zod | Done |
 | P1-3 AWS accounts, SSO, billing alarm | Deferred -- single AWS account for now, revisit once there's a team |
-| P1-4 CDK: web hosting, API, DynamoDB, media bucket | Code written, validated with `cdk synth`, not deployed |
-| P1-5 CI/CD via GitHub Actions + OIDC | Workflows written; OIDC role and GitHub repo variable still need setting up (`infra/README.md`) |
-| P1-6 End-to-end hello world | Done locally (API + web + schema validation); not yet verified against a real deploy |
-| P1-7 Logging and error tracking | Basic structured logging (API) and a browser error reporter are in; no external service wired up yet |
-| P1-8 Domain and certificate | Deferred -- no domain chosen yet |
+| P1-4 CDK: web hosting, API, DynamoDB, media bucket | **Deployed** to `dev` (`eu-north-1`), manually via `cdk deploy` |
+| P1-5 CI/CD via GitHub Actions + OIDC | Workflows written; OIDC role and GitHub repo variable still need setting up (`infra/README.md`) -- deploys so far have been manual |
+| P1-6 End-to-end hello world | **Verified against the real deployment**: create/get round-trips unchanged through the live API with a real Cognito token |
+| P1-7 Logging and error tracking | Structured logging (API, now flowing to real CloudWatch) and a browser error reporter; no external error-tracking service wired up yet |
+| P1-8 Domain and certificate | Deferred -- using the CloudFront/API Gateway default addresses for now |
 
 **Exit test** ("a merge to main deploys web and API to the dev address, and
-a deck round-trips through the API unchanged") isn't fully met yet: the
-round-trip is proven locally and in tests, but nothing has actually been
-deployed. P1-3, P1-5's AWS-side setup, and an actual `cdk deploy` are the
-remaining gaps.
+a deck round-trips through the API unchanged") -- the round-trip half is
+now verified for real (see above). The "a merge deploys" half isn't: there
+is no CI/CD deploy yet, every deploy so far has been run by hand. P1-5's
+AWS-side OIDC setup is the remaining gap.
 
 ## Phase 2 status
 

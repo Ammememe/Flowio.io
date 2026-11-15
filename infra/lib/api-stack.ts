@@ -20,7 +20,7 @@ import { AttributeType, BillingMode, ProjectionType, Table } from "aws-cdk-lib/a
 import { Runtime, type Function as LambdaFunction } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
-import { BlockPublicAccess, Bucket } from "aws-cdk-lib/aws-s3";
+import { BlockPublicAccess, Bucket, HttpMethods } from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
 export interface ApiStackProps extends StackProps {
@@ -93,7 +93,10 @@ export class ApiStack extends Stack {
     const userPoolClient = new UserPoolClient(this, "WebClient", {
       userPool,
       generateSecret: false, // public client (browser-based)
-      authFlows: { userSrp: true },
+      // adminUserPassword: lets the backend (admin-initiate-auth) sign a user
+      // in directly -- used for deploy-verification smoke tests, and handy
+      // later for any server-side flow that needs a token without a browser.
+      authFlows: { userSrp: true, adminUserPassword: true },
       oAuth: {
         flows: { authorizationCodeGrant: true },
         scopes: [OAuthScope.EMAIL, OAuthScope.OPENID, OAuthScope.PROFILE],
@@ -126,7 +129,9 @@ export class ApiStack extends Stack {
       autoDeleteObjects: stage !== "prod",
       cors: [
         {
-          allowedMethods: [],
+          // POST for the browser's presigned-POST upload (P3-7); S3 handles
+          // the OPTIONS preflight itself once a CORS rule exists.
+          allowedMethods: [HttpMethods.POST],
           allowedOrigins: webAppUrls,
           allowedHeaders: ["*"],
         },
