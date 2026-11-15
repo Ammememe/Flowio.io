@@ -21,6 +21,37 @@ without Google). Set `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` as env vars
 before `cdk deploy` to add it; without them the pool still works with
 email/password alone.
 
+### ElevenLabs Scribe (P4-1)
+
+Unlike the other third-party credential above, this one is **not** passed
+through CDK as an env var -- it's a real, billable API key, so it's created
+directly in Secrets Manager with the AWS CLI, out-of-band, and never
+touches a synthesized CloudFormation template:
+
+```bash
+aws secretsmanager create-secret \
+  --name flowio-elevenlabs-api-key-<stage> \
+  --secret-string <your ElevenLabs API key> \
+  --region eu-north-1
+```
+
+Get a key at https://elevenlabs.io/app/settings/api-keys -- when creating
+it, restrict it to **Speech to Text: Access** only, leave every other
+endpoint at **No Access** (this key only ever calls the single-use-token
+endpoint; least privilege means a leak of this key can't touch voice
+generation, dubbing, workspace settings, or anything else on the account).
+Also set a credit limit instead of "Unlimited", and leave "Auto-disable if
+leaked" on.
+
+`ApiStack` references the secret by name (`flowio-elevenlabs-api-key-<stage>`)
+and grants `secretsmanager:GetSecretValue` to exactly one Lambda's execution
+role -- nothing else in the account can read it. If the secret doesn't
+exist yet, the endpoint cleanly returns 501 and the web app falls back to
+the Web Speech API, so deploying without this step first is safe, just
+less capable. To rotate the key later: `aws secretsmanager put-secret-value`
+with the new value -- no redeploy needed, the Lambda re-reads it on its next
+cold start.
+
 ## Deploying
 
 Both stacks are live in `dev`/`eu-north-1` (see the root README's "What's
@@ -55,6 +86,12 @@ rediscover them):
   chicken-and-egg on a brand new account: `Flowio-Web-dev` doesn't have a
   URL until after its first deploy, so add it and redeploy `Flowio-Api-dev`
   once you have it.
+- On Windows with Git Bash: any AWS CLI argument starting with `/` (a log
+  group name, an IAM path, a Secrets Manager name with slashes) gets
+  silently mangled by MSYS's path conversion into something that looks like
+  a Windows path, producing confusing `InvalidParameterException` errors
+  with no mention of the real cause. Prefix the command with
+  `MSYS_NO_PATHCONV=1` when that happens.
 
 ## Wiring up CI/CD (P1-5)
 

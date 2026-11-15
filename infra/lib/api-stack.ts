@@ -21,6 +21,7 @@ import { Runtime, type Function as LambdaFunction } from "aws-cdk-lib/aws-lambda
 import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { BlockPublicAccess, Bucket, HttpMethods } from "aws-cdk-lib/aws-s3";
+import { Secret } from "aws-cdk-lib/aws-secretsmanager";
 import type { Construct } from "constructs";
 
 export interface ApiStackProps extends StackProps {
@@ -194,18 +195,22 @@ export class ApiStack extends Stack {
     });
 
     // P4-1: ElevenLabs Scribe needs a real API key from https://elevenlabs.io
-    // -- not something this stack can create. Set ELEVENLABS_API_KEY before
-    // `cdk deploy` to turn it on; without it the endpoint returns 501 and
-    // the web app falls back to the Web Speech API (same pattern as
-    // GOOGLE_CLIENT_ID/SECRET above). A Lambda env var, not Secrets Manager,
-    // to match that same pattern -- still encrypted at rest, just not
-    // independently rotatable. Worth moving to Secrets Manager if this ever
-    // needs rotation without a redeploy.
+    // -- not something this stack can create. The secret itself is created
+    // out-of-band with the AWS CLI (see infra/README.md), never through CDK,
+    // so the real value never touches a synthesized CloudFormation template.
+    // This just references it by name and grants read access scoped to this
+    // one Lambda's role -- nothing else in the account can read it without
+    // its own explicit grant. If the secret doesn't exist yet (a fresh stage
+    // before that one-time step), the endpoint cleanly returns 501 and the
+    // web app falls back to the Web Speech API, same as if it were unset.
+    const elevenLabsSecretName = `flowio-elevenlabs-api-key-${stage}`;
+    const elevenLabsSecret = Secret.fromSecretNameV2(this, "ElevenLabsSecret", elevenLabsSecretName);
     const createTranscriptionTokenFn = makeFn(
       "create-transcription-token",
       "../api/src/lambda/createTranscriptionToken.ts",
-      { ...authEnv, ELEVENLABS_API_KEY: process.env.ELEVENLABS_API_KEY ?? "" },
+      { ...authEnv, ELEVENLABS_SECRET_NAME: elevenLabsSecretName },
     );
+    elevenLabsSecret.grantRead(createTranscriptionTokenFn);
 
     decksTable.grantWriteData(createDeckFn);
     decksTable.grantReadData(getDeckFn);
@@ -280,8 +285,10 @@ export class ApiStack extends Stack {
       value: userPoolDomain.baseUrl(),
       description: "Set as VITE_COGNITO_DOMAIN for the web app.",
     });
-    new CfnOutput(this, "ElevenLabsConfigured", {
-      value: process.env.ELEVENLABS_API_KEY ? "yes" : "no (falls back to Web Speech API)",
+    new CfnOutput(this, "ElevenLabsSecretName", {
+      value: elevenLabsSecretName,
+      description:
+        "Create this with `aws secretsmanager create-secret --name <value> --secret-string <key>` if it doesn't exist yet; without it the endpoint 501s and the web app falls back to the Web Speech API.",
     });
   }
 }

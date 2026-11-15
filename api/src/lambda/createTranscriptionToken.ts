@@ -4,6 +4,7 @@ import type {
 } from "aws-lambda";
 import { getVerifier } from "../auth/getVerifier.js";
 import { createTranscriptionToken } from "../elevenlabs/createTranscriptionToken.js";
+import { getElevenLabsApiKey } from "../elevenlabs/getApiKey.js";
 import { logger } from "../logger.js";
 import { getAuthHeader } from "./authHeader.js";
 
@@ -12,7 +13,8 @@ export async function handler(
 ): Promise<APIGatewayProxyResultV2> {
   try {
     const auth = await getVerifier().verify(getAuthHeader(event));
-    const result = await createTranscriptionToken(auth, process.env.ELEVENLABS_API_KEY);
+    const apiKey = await getElevenLabsApiKey();
+    const result = await createTranscriptionToken(auth, apiKey);
     return {
       statusCode: result.status,
       headers: { "content-type": "application/json" },

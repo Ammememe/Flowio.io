@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { MAX_IMAGE_BYTES } from "@flowio/shared";
 import { DevVerifier } from "./auth/devVerifier.js";
 import { createTranscriptionToken } from "./elevenlabs/createTranscriptionToken.js";
+import { getElevenLabsApiKey } from "./elevenlabs/getApiKey.js";
 import { createDeck, deleteDeck, getDeck, listDecks, updateDeck } from "./handlers.js";
 import { logger } from "./logger.js";
 import { MemoryDeckStore } from "./store/memoryStore.js";
@@ -121,7 +122,7 @@ const server = createServer(async (req, res) => {
     }
 
     if (req.method === "POST" && url.pathname === "/transcription-token") {
-      const result = await createTranscriptionToken(auth, process.env.ELEVENLABS_API_KEY);
+      const result = await createTranscriptionToken(auth, await getElevenLabsApiKey());
       send(result.status, result.ok ? result.body : result);
       return;
     }

@@ -116,10 +116,17 @@ verify it against; ElevenLabs' wire protocol is plain JSON over WebSocket,
 which is why it shipped first). **Needs `ELEVENLABS_API_KEY` set** (get one
 at https://elevenlabs.io/app/settings/api-keys) -- without it, or if the
 request fails for any reason, the engine automatically and silently falls
-back to the Web Speech API instead of failing the mic outright. Nothing has
-been deployed with a real key yet, so this path is implementation-complete
-but unverified against real ElevenLabs traffic -- see `api/.env.example`
-for local testing once you have a key.
+back to the Web Speech API instead of failing the mic outright.
+
+**Deployed and verified** against real ElevenLabs infrastructure: token
+minting, the WebSocket handshake, `session_started`, and the audio-chunk
+message format are all confirmed working against production (not just
+mocked). The real API key lives in Secrets Manager, never in a Lambda env
+var or a CloudFormation template -- see `infra/README.md` for the setup and
+exactly what's locked down. The one thing not yet verified is transcription
+accuracy with a real human talking into a real microphone, which needs you,
+not something this can self-certify. See `api/.env.example` for local
+testing with your own key.
 
 **P4-10, privacy caveat:** ElevenLabs' self-serve API tier processes audio
 on US infrastructure, not EU, same as the Web Speech API fallback it
@@ -152,8 +159,9 @@ pnpm --filter web run test:visual                     # P2-8 visual snapshot tes
 Both stacks, to the `dev` stage in `eu-north-1`:
 
 - Web: https://d2ikpxu6qtx85h.cloudfront.net
-- API: `Flowio-Api-dev`'s `ApiUrl` output (Cognito user pool, DynamoDB, 6
-  Lambdas, media bucket + its own CloudFront distribution)
+- API: `Flowio-Api-dev`'s `ApiUrl` output (Cognito user pool, DynamoDB, 7
+  Lambdas, media bucket + its own CloudFront distribution, ElevenLabs
+  credential vending backed by a real key in Secrets Manager)
 
 Deployed manually (`cdk deploy`), not yet through `deploy.yml` -- the
 GitHub Actions OIDC role from P1-5 still isn't set up (see `infra/README.md`).
@@ -252,7 +260,7 @@ shared rules into `web/src/render/slideContent.css`, imported by both).
 
 | Issue | Status |
 | --- | --- |
-| P4-1 Production transcription via a credentialed provider | Done, code-complete -- ElevenLabs Scribe (not Amazon Transcribe; see the "Present with live following" section above for why), with a short-lived-token endpoint and automatic fallback to Web Speech. Needs a real `ELEVENLABS_API_KEY` to verify against live traffic |
+| P4-1 Production transcription via a credentialed provider | **Deployed and verified against real ElevenLabs infrastructure** -- not Amazon Transcribe (see the "Present with live following" section above for why), with a short-lived-token endpoint, the real key in Secrets Manager (scoped IAM grant, not a Lambda env var), and automatic fallback to Web Speech. Not yet verified with a real human microphone |
 | P4-2 Matcher moved into its own package, tested against replayed transcripts | Done -- `web/src/match/*`, ported from the Phase 0 spike and adapted to schema v1's title/bullet elements (`web/src/match/targets.ts`); replay test ported too (`web/test/match/replay.test.ts`) |
 | P4-3 Embeddings computed on deck load, model cached in the browser | Done -- `web/src/match/workerEmbedder.ts`, a Transformers.js model runs off the main thread; keyword-only matching still works if it fails or hasn't finished loading |
 | P4-4 Matcher connected to the emphasis interface | Done -- `web/src/present/liveEngine.ts` |
