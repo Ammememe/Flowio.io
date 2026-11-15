@@ -2,17 +2,19 @@
   "name": "@flowio/web",
   "private": true,
   "version": "0.0.1",
-  "description": "Web app shell: P1-6 hello world, the Phase 2 slide renderer/themes/present mode, and the Phase 3 dashboard/editor.",
+  "description": "Web app shell: P1-6 hello world, the Phase 2 slide renderer/themes/present mode, the Phase 3 dashboard/editor, and the Phase 4 live engine.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
     "test:visual": "playwright test"
   },
   "dependencies": {
     "@flowio/shared": "workspace:*",
+    "@huggingface/transformers": "^4.3.2",
     "@tiptap/core": "^3.34.0",
     "@tiptap/extension-document": "^3.34.0",
     "@tiptap/extension-text": "^3.34.0",
@@ -21,6 +23,7 @@
   "devDependencies": {
     "@playwright/test": "^1.65.1",
     "typescript": "^7.0.2",
-    "vite": "^8.3.8"
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   }
 }

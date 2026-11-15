@@ -26,3 +26,125 @@ body {
   border-radius: 4px;
   pointer-events: none;
 }
+
+/* P4-5: a visible listening state. */
+.live-status {
+  position: fixed;
+  left: 12px;
+  bottom: 10px;
+  z-index: 10;
+  font: 12px/1.4 system-ui, sans-serif;
+  color: #e8edf2;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+}
+.live-status[hidden] {
+  display: none;
+}
+
+.live-mic-button {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 10;
+  font: 13px/1 system-ui, sans-serif;
+  color: #e8edf2;
+  background: rgba(0, 0, 0, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+.live-mic-button--on {
+  background: #1d7a3f;
+  border-color: #2fa057;
+}
+
+/* P4-6: pre-talk sound check */
+.soundcheck-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.soundcheck {
+  width: 360px;
+  max-width: 90vw;
+  background: #fff;
+  color: #1a1f24;
+  border-radius: 12px;
+  padding: 24px;
+}
+.soundcheck h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+}
+.soundcheck__note {
+  font-size: 13px;
+  color: #6b7684;
+  margin: 0 0 14px;
+}
+.soundcheck__label {
+  display: block;
+  font-size: 12px;
+  color: #6b7684;
+  margin-bottom: 4px;
+}
+.soundcheck__device {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 6px;
+  border-radius: 6px;
+  border: 1px solid #e1e4e9;
+}
+.soundcheck__level-track {
+  margin-top: 14px;
+  height: 10px;
+  border-radius: 999px;
+  background: #e1e4e9;
+  overflow: hidden;
+}
+.soundcheck__level-fill {
+  height: 100%;
+  width: 0%;
+  background: #2563eb;
+  transition: width 60ms linear;
+}
+.soundcheck__hint,
+.soundcheck__consent {
+  font-size: 12px;
+  color: #6b7684;
+  line-height: 1.4;
+  margin: 12px 0 0;
+}
+.soundcheck__actions {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.soundcheck button.primary {
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+}
+.soundcheck button.primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.soundcheck button.secondary {
+  background: #fff;
+  color: #1a1f24;
+  border: 1px solid #e1e4e9;
+  border-radius: 6px;
+  padding: 8px 16px;
+}

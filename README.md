@@ -53,8 +53,9 @@ Open http://localhost:5174/present.html. It presents `web/src/deck/sampleDeck.ts
 -- the Phase 0 spike's "How airplanes fly" deck ported into schema v1, plus
 a few extra slides added to exercise all six layouts. Keys: `→`/`←`/`Space`/
 `PageUp`/`PageDown` to navigate, `1`-`9` to emphasise the nth bullet on the
-current slide (a manual stand-in for Phase 4's matcher), `0`/`Escape` to
-clear emphasis, `t` to swap the static/animated theme, `f` for fullscreen.
+current slide by hand, `0`/`Escape` to clear emphasis, `t` to swap the
+static/animated theme, `f` for fullscreen, `m` to toggle the microphone and
+`g` to toggle following (Phase 4, below).
 
 ## Sign up and build a deck (Phase 3)
 
@@ -79,6 +80,43 @@ reorder slides (P3-4), the top bar to pick a layout or theme per slide/deck
 change autosaves with a version number (P3-8) -- two tabs open on the same
 deck will get a 409 and a "reload" prompt instead of silently clobbering
 each other. **Present** opens `/present.html?deckId=...` with the real deck.
+
+## Present with live following (Phase 4, completes the MVP)
+
+Same `/present.html` as above, now with the actual "bullet highlights as
+you talk" engine. Click **Enable microphone** (or press `m`): a sound check
+(P4-6) asks for mic permission, lists input devices, shows a live level
+meter, and states plainly what happens to your voice before you confirm --
+today that's "sent to your browser's built-in speech recognition service"
+(P4-1 note below), never stored by us (P4-10). Once confirmed, titles and
+bullets on the current slide light up as you talk about them -- the Phase 0
+spike's matcher (P4-2, moved into `web/src/match/`), scoring embeddings
+(P4-3, a small model downloaded and cached in the browser) plus keyword
+overlap against a rolling transcript window.
+
+- `g` toggles following on/off without touching the mic.
+- `1`-`9` (manual emphasis) always wins over the live engine for a few
+  seconds (P4-5) -- useful to correct a miss without fighting it.
+- If live transcription drops, following just quietly stops updating and
+  retries a few times in the background -- no on-screen error (P4-7).
+- The deck's `language` field picks English or Swedish for both the
+  recognizer and the embedding model (P4-8).
+
+**P4-1 note:** the plan asks for "the provider chosen in P0-8" with an API
+endpoint vending short-lived credentials so the browser streams directly to
+it. That comparison was never conclusively run (see the spike's own
+README). This build uses the Web Speech API instead -- zero setup, so the
+rest of Phase 4 could be built and verified today -- which means audio
+currently goes through your browser's own speech recognition service
+(Google's, in Chrome), not an EU-region AWS service as P4-10 asks for. Real
+Amazon Transcribe streaming needs the AWS event-stream wire protocol
+implemented in the browser (eventstream framing, not just the HTTP/2
+transport the spike's local proxy used); the `TranscriptSource` interface
+(`web/src/speech/types.ts`) isolates this choice from everything else, so
+swapping it in is a contained follow-up, not a rewrite.
+
+**Not done:** P4-9 (usage metering) and real pilot testing (P4-11, which
+needs actual presenters, not something to automate).
 
 ## Checks
 
@@ -170,26 +208,54 @@ nothing from Phase 1 it could regress.
 
 | Issue | Status |
 | --- | --- |
-| P3-1 Sign-in with Cognito (email + Google) | CDK written (user pool, Hosted UI domain, app client; Google IdP wired but needs real `GOOGLE_CLIENT_ID`/`SECRET` from Google Cloud Console), not deployed. Local dev uses a stand-in (`web/src/auth/devAuth.ts`) |
-| P3-2 Deck API: create/list/get/update/delete, owner-only | Done -- owner checks return 404 (not 403) for someone else's deck, so existence isn't leaked |
+| P3-1 Sign-in with Cognito (email + Google) | User pool **deployed** (Google IdP wired but needs real `GOOGLE_CLIENT_ID`/`SECRET` from Google Cloud Console, not set up). The deployed *web app* still uses the local dev stand-in (`web/src/auth/devAuth.ts`), not real Cognito Hosted UI -- intentionally deferred, see the chat history for why |
+| P3-2 Deck API: create/list/get/update/delete, owner-only | **Deployed and verified against real AWS** with a real Cognito token -- owner checks return 404 (not 403) for someone else's deck, so existence isn't leaked |
 | P3-3 Dashboard | Done -- `web/dashboard.html`: list, create, rename, delete |
 | P3-4 Editor shell | Done -- `web/editor.html` sidebar: add, duplicate, delete, drag-to-reorder |
 | P3-5 Edit titles/bullets in place with Tiptap | Done -- minimal single-line Tiptap editors mounted directly onto the rendered elements (`web/src/editor/inlineEditor.ts`) |
 | P3-6 Layout + theme picker | Done -- per-slide layout, per-deck theme (`web/src/editor/pickers.ts`) |
-| P3-7 Image upload: presigned, size/type limits, CloudFront | Done -- real S3 presigned POST + its own CloudFront distribution in CDK (not deployed); local dev stores uploads in memory with the same size/type checks (`shared/src/uploadLimits.ts`) |
+| P3-7 Image upload: presigned, size/type limits, CloudFront | **Deployed and verified**: real S3 presigned POST + its own CloudFront distribution, end-to-end upload confirmed against live AWS. Local dev stores uploads in memory instead, same size/type checks (`shared/src/uploadLimits.ts`) |
 | P3-8 Autosave with a version number, undo/redo | Done -- optimistic concurrency (`expectedVersion`, 409 on conflict), debounced autosave, whole-deck undo/redo history |
 | P3-9 Cue editor | Done -- per-bullet cue phrases in the editor's right panel |
 
 **Exit test** ("a new user signs up, builds a 5-slide deck with one image,
-reloads the page, and nothing is lost"): verified by hand in a real browser
-for everything except real sign-up and a real S3 image -- sign-in,
-dashboard, slide add/edit/reorder, theme/layout changes, cues, and autosave
-all survive a hard reload against the local dev API. P3-1 and the S3 half
-of P3-7 need an actual `cdk deploy` (still blocked, see Phase 1 above)
-before they're real rather than local stand-ins.
+reloads the page, and nothing is lost"): the deck CRUD and image upload
+halves are verified against the real deployed API (see "What's deployed so
+far"). "A new user signs up" isn't yet real end-to-end: the deployed site's
+sign-in is still the dev stand-in, a deliberate choice to get the rest of
+the MVP (Phase 4) working first before wiring up real Cognito Hosted UI.
 
 Two real bugs were caught and fixed in this pass: Tiptap was duplicating
 text (it appends into the mount element rather than replacing it -- fixed
 by clearing the element first) and the editor canvas was silently missing
 all slide-content CSS (it lived only in `present/style.css`; pulled the
 shared rules into `web/src/render/slideContent.css`, imported by both).
+
+## Phase 4 status (completes the MVP)
+
+| Issue | Status |
+| --- | --- |
+| P4-1 Production transcription via a credentialed provider | Using the Web Speech API instead for now, deliberately -- see the "Present with live following" section above for why, and what swapping in real Amazon Transcribe would take |
+| P4-2 Matcher moved into its own package, tested against replayed transcripts | Done -- `web/src/match/*`, ported from the Phase 0 spike and adapted to schema v1's title/bullet elements (`web/src/match/targets.ts`); replay test ported too (`web/test/match/replay.test.ts`) |
+| P4-3 Embeddings computed on deck load, model cached in the browser | Done -- `web/src/match/workerEmbedder.ts`, a Transformers.js model runs off the main thread; keyword-only matching still works if it fails or hasn't finished loading |
+| P4-4 Matcher connected to the emphasis interface | Done -- `web/src/present/liveEngine.ts` |
+| P4-5 Presenter controls: mic on/off, following on/off, visible listening state, manual wins | Done -- `m`/`g` keys (or the on-screen mic button), status shown in the bottom-left corner, digit-key emphasis pauses live updates for 4s |
+| P4-6 Mic permission, device picker, pre-talk sound check | Done -- `web/src/present/soundCheck.ts`, shown once before the first "mic on" |
+| P4-7 Silent fallback on failure, then reconnect | Done -- a dropped connection stops updating emphasis and retries up to 5 times, 3s apart, with no on-screen error |
+| P4-8 Language setting per deck | Done -- `deck.language` picks the recognizer's language and the embedding model (English-only vs. multilingual) |
+| P4-9 Usage metering | Not done |
+| P4-10 Privacy: audio never stored, consent text, EU region | Partly done -- consent text shown in the sound check states plainly where audio goes today (Google's speech recognition, via the browser); the EU-region requirement isn't met until P4-1 moves to Amazon Transcribe |
+| P4-11 Pilot with 5-10 real presenters | Not done -- needs real people, not something to automate |
+
+**Exit test** ("a pilot user builds a deck and presents it to an audience
+with following switched on for the whole talk"): the mechanism is verified
+-- in a real browser, with the actual Transformers.js model and the actual
+matcher, speech-recognition events correctly drive emphasis on the right
+bullet (confirmed via a scripted test that simulates what the Web Speech
+API would emit, since real pilot testing needs real people). One real bug
+was caught and fixed doing this: the live engine's `setSlide` was a no-op
+until the matcher existed (created lazily on first mic-on), so a `Matcher`
+default of "slide 0" silently won if the presenter wasn't on the first
+slide when they turned the mic on -- fixed by tracking the current slide id
+independently and applying it the moment the matcher is created. The actual
+pilot (P4-11) is outside what this can self-certify.
